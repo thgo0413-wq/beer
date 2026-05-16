@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>精釀啤酒考核語音系統</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent-color: #ffb703;
+            --text-color: #f8f9fa;
+            --text-muted: #b3b3b3;
+            --highlight-bg: rgba(255, 183, 3, 0.15);
+            --border-color: #333333;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-color); padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .container { width: 100%; max-width: 700px; background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+        header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--accent-color); padding-bottom: 15px; }
+        header h1 { font-size: 22px; color: var(--accent-color); margin-bottom: 5px; }
+        header p { color: var(--text-muted); font-size: 13px; }
+        .tab-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .tab-btn { flex: 1; background: #333; border: 1px solid var(--border-color); color: white; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .tab-btn.active { background: var(--accent-color); color: #121212; border-color: var(--accent-color); }
+        .control-panel { background: #181818; padding: 12px; border-radius: 8px; margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); }
+        .btn-group { display: flex; gap: 8px; }
+        button.action-btn { background: #444; color: white; border: none; padding: 8px 16px; font-size: 13px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        button.action-btn.primary { background: #e63946; }
+        button.action-btn.go { background: #2a9d8f; }
+        .settings { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 13px; }
+        .beer-list { max-height: 55vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background: #161616; }
+        .beer-item { display: grid; grid-template-columns: 40px 1.2fr 1fr; padding: 10px 12px; border-bottom: 1px solid var(--border-color); align-items: center; font-size: 14px; }
+        .beer-item .no { color: var(--accent-color); font-weight: bold; }
+        .beer-item .zh { font-weight: 500; }
+        .beer-item .en { color: var(--text-muted); font-style: italic; }
+        .beer-item.playing { background-color: var(--highlight-bg); border-left: 4px solid var(--accent-color); color: #fff; }
+        .status-display { text-align: center; font-size: 15px; margin: 10px 0; min-height: 22px; color: var(--accent-color); font-weight: bold; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>🍻 精釀啤酒考核語音系統</h1>
+        <p>格式：中文品名 ➡️ 英文品名 ➡️ 英文品名 (重複發音)</p>
+    </header>
+    <div class="tab-group">
+        <button class="tab-btn active" id="tab1" onclick="switchGroup(1)">第一組 (01-50)</button>
+        <button class="tab-btn" id="tab2" onclick="switchGroup(2)">第二組 (51-100)</button>
+    </div>
+    <div class="control-panel">
+        <div class="btn-group">
+            <button id="playBtn" class="action-btn go">▶ 播放語音</button>
+            <button id="pauseBtn" class="action-btn">⏸ 暫停</button>
+            <button id="stopBtn" class="action-btn primary">⏹ 停止</button>
+        </div>
+        <div class="settings">
+            <label>⏱ 語速: <input type="range" id="rateRange" min="0.7" max="1.2" step="0.1" value="0.9" style="width:70px;"></label>
+            <label><input type="checkbox" id="loopCheck" checked> 🔁 循環</label>
+        </div>
+    </div>
+    <div class="status-display" id="statusText">請點擊播放語音開始</div>
+    <div class="beer-list" id="listContainer"></div>
+</div>
+<script>
+    const group1 = [
+        {no:1, zh:"艾比酒", en:"Abbey Ale"},{no:2, zh:"老啤酒", en:"Altbier"},{no:3, zh:"琥珀愛爾", en:"Amber Ale"},{no:4, zh:"美式IPA", en:"American IPA"},{no:5, zh:"美式淡愛爾", en:"American Pale Ale"},
+        {no:6, zh:"美式皮爾森", en:"American Pilsner"},{no:7, zh:"美式斯陶特", en:"American Stout"},{no:8, zh:"波羅的海波特", en:"Baltic Porter"},{no:9, zh:"大麥酒", en:"Barley Wine"},{no:10, zh:"桶陳", en:"Barrel Aged"},
+        {no:11, zh:"比利時IPA", en:"Belgian IPA"},{no:12, zh:"比利時淡愛爾", en:"Belgian Pale Ale"},{no:13, zh:"比利時強黑愛爾", en:"Belgian Strong Dark"},{no:14, zh:"比利時強金愛爾", en:"Belgian Strong Gold"},{no:15, zh:"柏林小麥", en:"Berliner Weisse"},
+        {no:16, zh:"最佳苦啤酒", en:"Best Bitter"},{no:17, zh:"蒸餾啤酒", en:"Bierbrand"},{no:18, zh:"苦啤酒", en:"Bitter"},{no:19, zh:"黑色IPA", en:"Black IPA"},{no:20, zh:"比利時黃金", en:"Blond"},
+        {no:21, zh:"勃克", en:"Bock"},{no:22, zh:"棕愛爾", en:"Brown Ale"},{no:23, zh:"香檳IPA", en:"Brut IPA"},{no:24, zh:"布頓愛爾", en:"Burton Ale"},{no:25, zh:"加州一般型", en:"California Common"},
+        {no:26, zh:"木桶愛爾", en:"Cask Ale"},{no:27, zh:"巧克力斯陶特", en:"Chocolate Stout"},{no:28, zh:"西打酒", en:"Cider"},{no:29, zh:"咖啡斯陶特", en:"Coffee Stout"},{no:30, zh:"奶油愛爾", en:"Cream Ale"},
+        {no:31, zh:"捷克皮爾森", en:"Czech Pilsner"},{no:32, zh:"雙倍勃克", en:"Doppelbock"},{no:33, zh:"多特蒙德出口型拉格", en:"Dortmunder Export"},{no:34, zh:"雙倍IPA", en:"Double IPA"},{no:35, zh:"比利時雙倍", en:"Dubbel"},
+        {no:36, zh:"黑拉格", en:"Dunkel"},{no:37, zh:"黑小麥", en:"Dunkelweizen"},{no:38, zh:"冰勃克", en:"Eisbock"},{no:39, zh:"特殊苦啤酒", en:"Extra Special Bitter"},{no:40, zh:"農舍愛爾", en:"Farmhouse Ale"},
+        {no:41, zh:"黑糖蘭比克", en:"Faro"},{no:42, zh:"法蘭德斯紅愛爾", en:"Flanders Red Ale"},{no:43, zh:"法蘭德斯棕愛爾", en:"Flemish Oud Bruin"},{no:44, zh:"水果愛爾", en:"Fruit Ale"},{no:45, zh:"水果蘭比克", en:"Fruit Lambic"},
+        {no:46, zh:"水果白啤酒", en:"Fruit Witbier"},{no:47, zh:"德式皮爾森", en:"German Pilsner"},{no:48, zh:"無麩質啤酒", en:"Gluten Free"},{no:49, zh:"英式金愛爾", en:"Golden Ale"},{no:50, zh:"鹽小麥", en:"Gose"}
+    ];
+    const group2 = [
+        {no:51, zh:"古魯特", en:"Gruit"},{no:52, zh:"香檳啤酒", en:"Gueuze"},{no:53, zh:"酵母小麥", en:"Hefeweizen"},{no:54, zh:"帝國IPA", en:"Imperial IPA"},{no:55, zh:"帝國斯陶特", en:"Imperial Stout"},
+        {no:56, zh:"印度式淡愛爾", en:"India Pale Ale"},{no:57, zh:"印度式淡拉格", en:"IPL"},{no:58, zh:"愛爾蘭紅愛爾", en:"Irish Red Ale"},{no:59, zh:"愛爾蘭斯陶特", en:"Irish Stout"},{no:60, zh:"原漿啤酒", en:"Kellerbier"},
+        {no:61, zh:"科隆", en:"Kolsch"},{no:62, zh:"比利時櫻桃啤酒", en:"Kriek"},{no:63, zh:"水晶小麥", en:"Kristallweizen"},{no:64, zh:"蘭比克", en:"Lambic"},{no:65, zh:"五月勃克", en:"Maibock"},
+        {no:66, zh:"梅爾森", en:"Marzen"},{no:67, zh:"輕愛爾", en:"Mild"},{no:68, zh:"牛奶斯陶特", en:"Milk Stout"},{no:69, zh:"慕尼黑淡拉格", en:"Munich Helles"},{no:70, zh:"新英格蘭IPA", en:"NE IPA"},
+        {no:71, zh:"無酒精啤酒", en:"Non-alcohol"},{no:72, zh:"燕麥斯陶特", en:"Oatmeal Stout"},{no:73, zh:"十月啤酒", en:"Oktoberfestbier"},{no:74, zh:"老愛爾", en:"Old Ale"},{no:75, zh:"牡蠣斯陶特", en:"Oyster Stout"},
+        {no:76, zh:"南太平洋淡愛爾", en:"Pacific Pale Ale"},{no:77, zh:"梨子西打酒", en:"Perry"},{no:78, zh:"皮爾森", en:"Pilsner"},{no:79, zh:"波特", en:"Porter"},{no:80, zh:"頂級苦啤酒", en:"Premium Bitter"},
+        {no:81, zh:"南瓜愛爾", en:"Pumpkin Ale"},{no:82, zh:"比利時四倍", en:"Quadrupel"},{no:83, zh:"蘇打啤酒", en:"Radler"},{no:84, zh:"煙燻啤酒", en:"Rauchbier"},{no:85, zh:"紅色IPA", en:"Red IPA"},
+        {no:86, zh:"裸麥愛爾", en:"Rye Ale"},{no:87, zh:"季節啤酒", en:"Saison"},{no:88, zh:"深黑拉格", en:"Schwarzbier"},{no:89, zh:"蘇格蘭愛爾", en:"Scotch Ale"},{no:90, zh:"社交IPA", en:"Session IPA"},
+        {no:91, zh:"酸愛爾", en:"Sour Ale"},{no:92, zh:"蒸氣啤酒", en:"Steam Beer"},{no:93, zh:"修道院", en:"Trappist"},{no:94, zh:"比利時三倍", en:"Tripel"},{no:95, zh:"維也納", en:"Vienna"},
+        {no:96, zh:"小麥勃克", en:"Weizenbock"},{no:97, zh:"小麥愛爾", en:"Wheat Ale"},{no:98, zh:"白色IPA", en:"White IPA"},{no:99, zh:"冬季啤酒", en:"Winter Warmer"},{no:100, zh:"白啤酒", en:"Witbier"}
+    ];
+
+    let currentGroupNum = 1;
+    let beers = group1;
+    let currentIndex = 0;
+    let isPlaying = false;
+    let synth = window.speechSynthesis;
+    let speakTimeout = null;
+
+    function renderList() {
+        const container = document.getElementById('listContainer');
+        container.innerHTML = '';
+        beers.forEach((beer, idx) => {
+            const item = document.createElement('div');
+            item.className = 'beer-item';
+            item.id = `beer-${idx}`;
+            item.innerHTML = `<div class="no">${String(beer.no).padStart(2,'0')}</div><div class="zh">${beer.zh}</div><div class="en">${beer.en}</div>`;
+            container.appendChild(item);
+        });
+    }
+
+    function switchGroup(num) {
+        stopPlayback();
+        currentGroupNum = num;
+        beers = num === 1 ? group1 : group2;
+        document.getElementById('tab1').classList.toggle('active', num === 1);
+        document.getElementById('tab2').classList.toggle('active', num === 2);
+        renderList();
+    }
+
+    function highlightRow(index) {
+        document.querySelectorAll('.beer-item').forEach(el => el.classList.remove('playing'));
+        const el = document.getElementById(`beer-${index}`);
+        if (el) {
+            el.classList.add('playing');
+            el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }
+
+    function speakSequence() {
+        if (!isPlaying || currentIndex >= beers.length) {
+            if (currentIndex >= beers.length && document.getElementById('loopCheck').checked && isPlaying) {
+                currentIndex = 0;
+                speakSequence();
+            } else if (currentIndex >= beers.length) {
+                stopPlayback();
+                document.getElementById('statusText').innerText = "🎉 本組考核播放完畢！";
+            }
+            return;
+        }
+
+        const beer = beers[currentIndex];
+        document.getElementById('statusText').innerText = `📢 No.${beer.no} ${beer.zh}`;
+        highlightRow(currentIndex);
+
+        let r = parseFloat(document.getElementById('rateRange').value);
+        let u1 = new SpeechSynthesisUtterance(beer.zh); u1.lang = 'zh-TW'; u1.rate = r;
+        let u2 = new SpeechSynthesisUtterance(beer.en); u2.lang = 'en-US'; u2.rate = r - 0.05;
+        let u3 = new SpeechSynthesisUtterance(beer.en); u3.lang = 'en-US'; u3.rate = r;
+
+        u1.onend = () => { if(isPlaying) speakTimeout = setTimeout(() => synth.speak(u2), 300); };
+        u2.onend = () => { if(isPlaying) speakTimeout = setTimeout(() => synth.speak(u3), 500); };
+        u3.onend = () => { if(isPlaying) { currentIndex++; speakTimeout = setTimeout(speakSequence, 1000); } };
+
+        synth.speak(u1);
+    }
+
+    document.getElementById('playBtn').addEventListener('click', () => {
+        if (isPlaying) return;
+        isPlaying = true;
+        document.getElementById('playBtn').textContent = "🔊 播報中";
+        if (synth.paused) synth.resume(); else speakSequence();
+    });
+
+    document.getElementById('pauseBtn').addEventListener('click', () => {
+        if (!isPlaying) return;
+        isPlaying = false;
+        document.getElementById('playBtn').textContent = "▶ 繼續播放";
+        synth.cancel(); clearTimeout(speakTimeout);
+        document.getElementById('statusText').innerText = "⏸ 已暫停";
+    });
+
+    function stopPlayback() {
+        isPlaying = false; currentIndex = 0;
+        synth.cancel(); clearTimeout(speakTimeout);
+        document.getElementById('playBtn').textContent = "▶ 播放語音";
+        document.getElementById('statusText').innerText = "進度已重置";
+        document.querySelectorAll('.beer-item').forEach(el => el.classList.remove('playing'));
+    }
+    document.getElementById('stopBtn').addEventListener('click', stopPlayback);
+
+    renderList();
+</script>
+</body>
+</html>
