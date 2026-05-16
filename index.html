@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>精釀啤酒考核語音系統 v3.4</title>
+    <title>精釀啤酒考核語音系統 v3.5</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -60,7 +60,7 @@
 <body>
 <div class="container">
     <header>
-        <h1>🍻 精釀啤酒考核語音系統 v3.4</h1>
+        <h1>🍻 精釀啤酒考核語音系統 v3.5</h1>
     </header>
     
     <div class="filter-panel">
@@ -93,6 +93,8 @@
     <div class="status-display" id="statusText">請點擊品名或播放按鈕開始</div>
     <div class="beer-list" id="listContainer"></div>
 </div>
+
+<audio id="iosMediaActivator" loop preload="auto" src="data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABGaWxlIGdlbmVyYXRlZCBieSBhdWRpb2NoZWNrLm5ldEFMQlVNXXXXAAAACHRiaW9zAAAAAABUSVNTRQAAAAgAc2FmYXJpAAAAAA==//M0YAAAAAAAAnbXVzaWMAAAAAADX/////////8zRgAAAAAAAAdJSf/////////M0YAAAAAAAAAIgD/////////M0YAAAAAAAAAMgD/////////M0YAAAAAAAAA0gD/////////M0YAAAAAAAAA4gD/////////M0YAAAAAAAAA8gD/////////M0YAAAAAAAAA+gD/////////M0YAAAAAAAAA/gD/////////M0YAAAAAAAAA/wD/////////M0YAAAAAAAAA/8D////////M0YAAAAAAAAA/8f///////8zRgAAAAAAAAD/z////////M0YAAAAAAAAA/+////////8zRgAAAAAAAAD/8///////8zRgAAAAAAAAD/9///////9zRgAAAAAAAAD/+//4///8zRgAAAAAAAAD/+P/4///8zRgAAAAAAAAD/+f/5///M0YAAAAAAAAA/+f/+f//M0YAAAAAAAAA/+v/+v//M0YAAAAAAAAA/+v/+v//M0YAAAAAAAAA/+3/+3//M0YAAAAAAAAA/+3/+3//M0YAAAAAAAAA/+7/+7//M0YAAAAAAAAA/+7/+7//M0YAAAAAAAAA/+///v//M0YAAAAAAAAA/+///v//M0YAAAAAAAAA/////v//M0YAAAAAAAAA/////v//M0YAAAAAAAAA/////w=="></audio>
 
 <script>
     const group1 = [
@@ -132,9 +134,10 @@
     let synth = window.speechSynthesis;
     let delayTimeout = null;
 
-    // Web Audio 後台硬體鎖：核心防休眠黑科技
+    // Web Audio 後台硬體鎖 + 實體 Media 標籤雙保險
     let audioCtx = null;
     let keepAliveOsc = null;
+    let mediaActivator = document.getElementById('iosMediaActivator');
 
     document.getElementById('delayRange').addEventListener('input', (e) => {
         document.getElementById('delayVal').innerText = parseFloat(e.target.value).toFixed(1) + 's';
@@ -188,7 +191,7 @@
                 }
                 const orderIndex = playOrder.indexOf(idx);
                 if (orderIndex !== -1) {
-                    startHardwareKeepAlive(); // 每次點擊都確保硬體鎖牢牢鎖定
+                    activateIosAudioSystem(); // 觸發實體媒體與硬體鎖
                     selectAndPlayBeer(orderIndex);
                 }
             });
@@ -233,8 +236,15 @@
         }
     }
 
-    // 核心黑科技：啟動 Web Audio 脈衝鎖，強行霸佔 iOS 音訊線程，解鎖背景與藍牙耳機
-    function startHardwareKeepAlive() {
+    // 終極合規核心：同時啟動「無聲 MP3 標籤」與「硬體低頻震盪器」
+    // 徹底騙過 iOS 的 AudioSession 狀態機，解鎖關螢幕與耳機按鍵
+    function activateIosAudioSystem() {
+        // 1. 播放內嵌的實體媒體檔案 (取得藍牙耳機控制權、允許鎖屏)
+        if (mediaActivator && mediaActivator.paused) {
+            mediaActivator.play().catch(e => console.log("Media Activator failed:", e));
+        }
+
+        // 2. 啟動 Web Audio 脈衝鎖 (維持背景運作，防止網頁凍結)
         try {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -243,12 +253,11 @@
                 audioCtx.resume();
             }
             if (!keepAliveOsc) {
-                // 建立一個 20Hz 的極低頻振盪器（人類耳朵聽不見，但硬體音訊晶片必須持續工作）
                 keepAliveOsc = audioCtx.createOscillator();
                 let gainNode = audioCtx.createGain();
                 keepAliveOsc.type = 'sine';
                 keepAliveOsc.frequency.setValueAtTime(20, audioCtx.currentTime);
-                gainNode.gain.setValueAtTime(0.001, audioCtx.currentTime); // 體積極微小防爆音
+                gainNode.gain.setValueAtTime(0.001, audioCtx.currentTime);
                 keepAliveOsc.connect(gainNode);
                 gainNode.connect(audioCtx.destination);
                 keepAliveOsc.start();
@@ -258,7 +267,10 @@
         }
     }
 
-    function stopHardwareKeepAlive() {
+    function deactivateIosAudioSystem() {
+        if (mediaActivator) {
+            mediaActivator.pause();
+        }
         if (keepAliveOsc) {
             try { keepAliveOsc.stop(); } catch(e){}
             keepAliveOsc = null;
@@ -294,20 +306,19 @@
         document.getElementById('statusText').innerText = isQuizMode ? `🎯 盲聽測驗：No.${beer.no} 英文播報中` : `📢 No.${beer.no} ${beer.zh}`;
         highlightRow(listIdx);
 
-        // 綁定 iOS 控制中心（耳機觸控實體鍵的核心通行證）
+        // 綁定 iOS 控制中心（耳機控制的門戶）
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: isQuizMode ? `No.${beer.no} [盲聽測驗]` : `No.${beer.no} ${beer.zh}`,
                 artist: beer.en,
-                album: "精釀啤酒考核語音系統 v3.4"
+                album: "精釀啤酒考核語音系統 v3.5"
             });
         }
 
         let r = parseFloat(document.getElementById('rateRange').value);
         let d = parseFloat(document.getElementById('delayRange').value) * 1000;
 
-        // 強力修正：iOS 線程防休眠機制
-        // 每當開始講話，就用意志力去踢醒語音引擎
+        // 關螢幕防休眠：每次播報前強制喚醒引擎
         if (synth.paused) synth.resume();
 
         if (isQuizMode) {
@@ -329,7 +340,7 @@
 
     function handlePlayAction() {
         if (displayList.length === 0) return;
-        startHardwareKeepAlive();
+        activateIosAudioSystem(); // 播放時強制佔領音訊通道
         if (isPlaying) return;
         isPlaying = true;
         document.getElementById('playBtn').textContent = "🔊 播報中";
@@ -345,6 +356,7 @@
         isPlaying = false;
         clearTimeout(delayTimeout);
         synth.pause();
+        if (mediaActivator) mediaActivator.pause(); // 暫停實體媒體
         document.getElementById('playBtn').textContent = "▶ 繼續播放";
         updateMediaSessionStatus();
         document.getElementById('statusText').innerText = "⏸ 已暫停";
@@ -355,7 +367,7 @@
         playPointer = 0;
         clearTimeout(delayTimeout);
         synth.cancel();
-        stopHardwareKeepAlive();
+        deactivateIosAudioSystem(); // 釋放音訊通道
         document.getElementById('playBtn').textContent = "▶ 播放語音";
         document.getElementById('statusText').innerText = "進度已重置";
         updateMediaSessionStatus();
@@ -372,7 +384,7 @@
         }
     }
 
-    // 實體藍牙耳機［播放／暫停／下一首／上一首］動作映射
+    // 實體耳機控制項動作綁定
     if ('mediaSession' in navigator) {
         navigator.mediaSession.setActionHandler('play', handlePlayAction);
         navigator.mediaSession.setActionHandler('pause', handlePauseAction);
