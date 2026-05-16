@@ -81,7 +81,7 @@
         {no:66, zh:"梅爾森", en:"Marzen"},{no:67, zh:"輕愛爾", en:"Mild"},{no:68, zh:"牛奶斯陶特", en:"Milk Stout"},{no:69, zh:"慕尼黑淡拉格", en:"Munich Helles"},{no:70, zh:"新英格蘭IPA", en:"NE IPA"},
         {no:71, zh:"無酒精啤酒", en:"Non-alcohol"},{no:72, zh:"燕麥斯陶特", en:"Oatmeal Stout"},{no:73, zh:"十月啤酒", en:"Oktoberfestbier"},{no:74, zh:"老愛爾", en:"Old Ale"},{no:75, zh:"牡蠣斯陶特", en:"Oyster Stout"},
         {no:76, zh:"南太平洋淡愛爾", en:"Pacific Pale Ale"},{no:77, zh:"梨子西打酒", en:"Perry"},{no:78, zh:"皮爾森", en:"Pilsner"},{no:79, zh:"波特", en:"Porter"},{no:80, zh:"頂級苦啤酒", en:"Premium Bitter"},
-        {no:81, zh:"南瓜愛爾", en:"Pumpkin Ale"},{no:82, zh:"比利時四倍", en:"Quadrupel"},{no:83, zh:"蘇打啤酒", en:"Radler"},{no:84, zh:"煙燻啤酒", en:"Rauchbier"},{no:85, zh:"紅色IPA", en:"Red IPA"},
+        {no:81, zh:"南瓜愛爾", en:"Pumpkin Ale"},{no:82, zh:"比利時官方四倍", en:"Quadrupel"},{no:83, zh:"蘇打啤酒", en:"Radler"},{no:84, zh:"煙燻啤酒", en:"Rauchbier"},{no:85, zh:"紅色IPA", en:"Red IPA"},
         {no:86, zh:"裸麥愛爾", en:"Rye Ale"},{no:87, zh:"季節啤酒", en:"Saison"},{no:88, zh:"深黑拉格", en:"Schwarzbier"},{no:89, zh:"蘇格蘭愛爾", en:"Scotch Ale"},{no:90, zh:"社交IPA", en:"Session IPA"},
         {no:91, zh:"酸愛爾", en:"Sour Ale"},{no:92, zh:"蒸氣啤酒", en:"Steam Beer"},{no:93, zh:"修道院", en:"Trappist"},{no:94, zh:"比利時官方三倍", en:"Tripel"},{no:95, zh:"維也納", en:"Vienna"},
         {no:96, zh:"小麥勃克", en:"Weizenbock"},{no:97, zh:"小麥愛爾", en:"Wheat Ale"},{no:98, zh:"白色IPA", en:"White IPA"},{no:99, zh:"冬季啤酒", en:"Winter Warmer"},{no:100, zh:"白啤酒", en:"Witbier"}
@@ -103,7 +103,6 @@
             item.id = `beer-${idx}`;
             item.innerHTML = `<div class="no">${String(beer.no).padStart(2,'0')}</div><div class="zh">${beer.zh}</div><div class="en">${beer.en}</div>`;
             
-            // 新增點擊事件：隨點隨播
             item.addEventListener('click', () => {
                 selectAndPlayBeer(idx);
             });
@@ -126,21 +125,19 @@
         const el = document.getElementById(`beer-${index}`);
         if (el) {
             el.classList.add('playing');
-            el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            // 這裡改成 center，讓播放項目永遠完美保持在表格正中央！
+            el.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
     }
 
     function selectAndPlayBeer(index) {
-        // 停止當前播放
         synth.cancel();
         clearTimeout(speakTimeout);
         
-        // 切換進度
         currentIndex = index;
         isPlaying = true;
         document.getElementById('playBtn').textContent = "🔊 播報中";
         
-        // 開始播放選中的項目
         speakSequence();
     }
 
