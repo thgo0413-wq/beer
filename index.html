@@ -128,8 +128,6 @@
         if (el && list) {
             el.classList.add('playing');
             
-            // iPhone 專屬精準不移位計算：
-            // 讓項目的中心點，剛好對齊表格容器的中心點，且絕不拉扯外圍視窗！
             const elementOffsetTop = el.offsetTop;
             const elementHeight = el.offsetHeight;
             const listHeight = list.clientHeight;
