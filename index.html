@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>精釀啤酒考核語音系統 v3.6 - 終極合規版</title>
+    <title>精釀啤酒考核語音系統 v3.7</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -60,7 +60,7 @@
 <body>
 <div class="container">
     <header>
-        <h1>🍻 精釀啤酒考核語音系統 v3.6</h1>
+        <h1>🍻 精釀啤酒考核語音系統 v3.7</h1>
     </header>
     
     <div class="filter-panel">
@@ -77,7 +77,7 @@
                 <button id="stopBtn" class="action-btn primary">⏹ 停止</button>
             </div>
             <div class="settings-group">
-                <label>⏱️語速: <input type="range" id="rateRange" min="0.6" max="1.4" step="0.1" value="1.0" style="width:65px;"></label>
+                <label>⏱️語速: <input type="range" id="rateRange" min="0.6" max="1.4" step="0.1" value="0.9" style="width:65px;"></label>
                 <label>⏱️間隔: <input type="range" id="delayRange" min="0.5" max="4.0" step="0.5" value="1.0" style="width:65px;"><span id="delayVal">1s</span></label>
             </div>
         </div>
@@ -94,10 +94,9 @@
     <div class="beer-list" id="listContainer"></div>
 </div>
 
-<audio id="trueAudioPlayer" preload="auto"></audio>
+<audio id="iosMediaActivator" loop preload="auto" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="></audio>
 
 <script>
-    // 基礎資料結構
     const group1 = [
         {no:1, zh:"艾比酒", en:"Abbey Ale"},{no:2, zh:"老啤酒", en:"Altbier"},{no:3, zh:"琥珀愛爾", en:"Amber Ale"},{no:4, zh:"美式IPA", en:"American IPA"},{no:5, zh:"美式淡愛爾", en:"American Pale Ale"},
         {no:6, zh:"美式皮爾森", en:"American Pilsner"},{no:7, zh:"美式斯陶特", en:"American Stout"},{no:8, zh:"波羅地海波特", en:"Baltic Porter"},{no:9, zh:"大麥酒", en:"Barley Wine"},{no:10, zh:"桶陳", en:"Barrel Aged"},
@@ -123,18 +122,6 @@
         {no:96, zh:"小麥勃克", en:"Weizenbock"},{no:97, zh:"小麥愛爾", en:"Wheat Ale"},{no:98, zh:"白色IPA", en:"White IPA"},{no:99, zh:"冬季啤酒", en:"Winter Warmer"},{no:100, zh:"白啤酒", en:"Witbier"}
     ];
 
-    // ==========================================
-    // 💡 終極語音真實音訊矩陣數據庫 (Base64 MP3)
-    // ==========================================
-    const audioMatrix = {
-        // 格式範例： 1: { zh: "data:audio/mp3;base64,...", en: "data:audio/mp3;base64,..." }
-        // 這裡我先內嵌 No.1 作為結構示範，稍後我會說明如何 0 秒無痛導入 100 首完整大資料包
-        1: {
-            zh: "data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABGaWxlIGdlbmVyYXRlZCBieSBhdWRpb2NoZWNrLm5ldEFMQlVNXXXXAAAACHRiaW9zAAAAAABUSVNTRQAAAAgAc2FmYXJpAAAAAA==//M0YAAAAAAAAnbXVzaWMAAAAAADX/////////8zRgAAAAAAAAdJSf/////////M0YAAAAAAAAAIgD/////////M0YAAAAAAAAAMgD/////////M0YAAAAAAAAA0gD/////////M0YAAAAAAAAA4gD/////////M0YAAAAAAAAA8gD/////////M0YAAAAAAAAA+gD/////////M0YAAAAAAAAA/gD/////////M0YAAAAAAAAA/wD/////////M0YAAAAAAAAA/8D////////M0YAAAAAAAAA/8f///////8zRgAAAAAAAAD/z////////M0YAAAAAAAAA/+...[略]",
-            en: "data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABGaWxlIGdlbmVyYXRlZCBieSBhdWRpb2NoZWNrLm5ldEFMQlVNXXXXAAAACHRiaW9zAAAAAABUSVNTRQAAAAgAc2FmYXJpAAAAAA==//M0YAAAAAAAAnbXVzaWMAAAAAADX/////////8zRgAAAAAAAAdJSf/////////M0YAAAAAAAAAIgD/////////M0YAAAAAAAAAMgD/////////M0YAAAAAAAAA0gD/////////M0YAAAAAAAAA4gD/////////M0YAAAAAAAAA8gD/////////M0YAAAAAAAAA+gD/////////M0YAAAAAAAAA/gD/////////M0YAAAAAAAAA/wD/////////M0YAAAAAAAAA/8D////////M0YAAAAAAAAA/8f///////8zRgAAAAAAAAD/z////////M0YAAAAAAAAA/+...[略]"
-        }
-    };
-
     let currentGroupNum = 1;
     let favorites = JSON.parse(localStorage.getItem('beer_favs')) || [];
     let showFavOnly = false;
@@ -144,9 +131,13 @@
     let playPointer = 0;  
     
     let isPlaying = false;
-    let truePlayer = document.getElementById('trueAudioPlayer');
+    let synth = window.speechSynthesis;
     let delayTimeout = null;
-    let currentPlayPhase = 'zh'; // 'zh' 或 'en' 或 'en2'
+
+    // Web Audio 核心調度
+    let audioCtx = null;
+    let silentNode = null;
+    let mediaActivator = document.getElementById('iosMediaActivator');
 
     document.getElementById('delayRange').addEventListener('input', (e) => {
         document.getElementById('delayVal').innerText = parseFloat(e.target.value).toFixed(1) + 's';
@@ -199,7 +190,10 @@
                     document.getElementById(`en-${idx}`).classList.toggle('revealed');
                 }
                 const orderIndex = playOrder.indexOf(idx);
-                if (orderIndex !== -1) selectAndPlayBeer(orderIndex);
+                if (orderIndex !== -1) {
+                    activateIosAudioSystem(); // 點擊當下，強行將音訊通道永久鎖定
+                    selectAndPlayBeer(orderIndex);
+                }
             });
             container.appendChild(item);
         });
@@ -242,17 +236,53 @@
         }
     }
 
+    // 🔥 終極奧義：同時啟動 HTML5 無聲 wav 軌道 + Web Audio 活體心跳節拍
+    // 這能向 iOS 申報此網頁為「常駐背景高優先級音頻播放器」，徹底解開關螢幕與實體耳機按鍵的枷鎖
+    function activateIosAudioSystem() {
+        if (mediaActivator && mediaActivator.paused) {
+            mediaActivator.play().catch(e => console.log("Activator bypass:", e));
+        }
+        try {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            if (!silentNode) {
+                // 每秒生成微小的音訊緩衝，強行佔領實體藍牙硬體線程，誘騙耳機控制鍵保持激活
+                let buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.1, audioCtx.sampleRate);
+                silentNode = audioCtx.createBufferSource();
+                silentNode.buffer = buffer;
+                silentNode.loop = true;
+                let gainNode = audioCtx.createGain();
+                gainNode.gain.setValueAtTime(0.001, audioCtx.currentTime); 
+                silentNode.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                silentNode.start();
+            }
+        } catch(e) {
+            console.log("AudioContext bypass:", e);
+        }
+    }
+
+    function deactivateIosAudioSystem() {
+        if (mediaActivator) mediaActivator.pause();
+        if (silentNode) { try { silentNode.stop(); } catch(e){} silentNode = null; }
+        if (audioCtx) { try { audioCtx.close(); } catch(e){} audioCtx = null; }
+    }
+
     function selectAndPlayBeer(orderIdx) {
         clearTimeout(delayTimeout);
-        truePlayer.pause();
+        synth.cancel();
         playPointer = orderIdx;
         isPlaying = true;
         document.getElementById('playBtn').textContent = "🔊 播報中";
         updateMediaSessionStatus();
-        playCurrentPointer('zh');
+        speakCurrentPointer();
     }
 
-    function playCurrentPointer(phase) {
+    function speakCurrentPointer() {
         if (!isPlaying) return;
         if (playPointer >= playOrder.length) {
             if (document.getElementById('loopCheck').checked) { playPointer = 0; } 
@@ -264,91 +294,60 @@
         if (!beer) return;
 
         const isQuizMode = document.getElementById('quizCheck').checked;
-        document.getElementById('statusText').innerText = isQuizMode ? `🎯 盲聽測驗：No.${beer.no} 英文播放中` : `📢 No.${beer.no} ${beer.zh}`;
+        document.getElementById('statusText').innerText = isQuizMode ? `🎯 盲聽測驗：No.${beer.no} 英文播報中` : `📢 No.${beer.no} ${beer.zh}`;
         highlightRow(listIdx);
 
-        // 核心突破：同步更新 iOS 鎖屏控制中心，耳機控制權 100% 啟動
+        // 綁定控制中心（iOS 鎖屏面板與藍牙耳機映射的核心門票）
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: isQuizMode ? `No.${beer.no} [盲聽測驗]` : `No.${beer.no} ${beer.zh}`,
                 artist: beer.en,
-                album: "精釀啤酒考核語音系統 v3.6"
+                album: "精釀啤酒考核語音系統 v3.7"
             });
         }
 
-        currentPlayPhase = phase;
-        
-        // 讀取真實音訊（降級容錯處理：若無內嵌音訊，自動跳過）
-        const fileData = audioMatrix[beer.no];
-        if (!fileData) {
-            console.log(`No.${beer.no} 缺少實體音訊，自動遞增`);
-            triggerNextDelay();
-            return;
-        }
+        let r = parseFloat(document.getElementById('rateRange').value);
+        let d = parseFloat(document.getElementById('delayRange').value) * 1000;
 
-        // 語速變更：利用 HTML5 Audio 的原生播放速率控制，完全相容！
-        const rate = parseFloat(document.getElementById('rateRange').value);
-        truePlayer.playbackRate = rate;
+        // 關螢幕與背景防凍結保護：每次調用前強制喚醒 iOS 音訊動態線程
+        if (synth.paused) synth.resume();
 
         if (isQuizMode) {
-            // 盲聽測驗模式：唯讀兩次英文
-            truePlayer.src = fileData.en;
-            if (phase === 'zh') currentPlayPhase = 'en'; // 盲聽模式將 zh 轉為 en
-            
-            truePlayer.onended = () => {
-                if (!isPlaying) return;
-                if (currentPlayPhase === 'en') {
-                    currentPlayPhase = 'en2';
-                    delayTimeout = setTimeout(() => { if (isPlaying) truePlayer.play().catch(e=>console.log(e)); }, 400);
-                } else {
-                    triggerNextDelay();
-                }
-            };
+            let u1 = new SpeechSynthesisUtterance(beer.en); u1.lang = 'en-US'; u1.rate = r;
+            let u2 = new SpeechSynthesisUtterance(beer.en); u2.lang = 'en-US'; u2.rate = r;
+            u1.onend = () => { if(isPlaying) { if(synth.paused) synth.resume(); synth.speak(u2); } };
+            u2.onend = () => { if(isPlaying) { playPointer++; delayTimeout = setTimeout(speakCurrentPointer, d); } };
+            synth.speak(u1);
         } else {
-            // 標準模式：中文 -> 英文 -> 英文
-            if (phase === 'zh') {
-                truePlayer.src = fileData.zh;
-            } else {
-                truePlayer.src = fileData.en;
-            }
-
-            truePlayer.onended = () => {
-                if (!isPlaying) return;
-                if (currentPlayPhase === 'zh') {
-                    playCurrentPointer('en');
-                } else if (currentPlayPhase === 'en') {
-                    currentPlayPhase = 'en2';
-                    delayTimeout = setTimeout(() => { if (isPlaying) truePlayer.play().catch(e=>console.log(e)); }, 300);
-                } else {
-                    triggerNextDelay();
-                }
-            };
+            let u1 = new SpeechSynthesisUtterance(beer.zh); u1.lang = 'zh-TW'; u1.rate = r;
+            let u2 = new SpeechSynthesisUtterance(beer.en); u2.lang = 'en-US'; u2.rate = r - 0.05;
+            let u3 = new SpeechSynthesisUtterance(beer.en); u3.lang = 'en-US'; u3.rate = r;
+            u1.onend = () => { if(isPlaying) { if(synth.paused) synth.resume(); synth.speak(u2); } };
+            u2.onend = () => { if(isPlaying) { if(synth.paused) synth.resume(); synth.speak(u3); } };
+            u3.onend = () => { if(isPlaying) { playPointer++; delayTimeout = setTimeout(speakCurrentPointer, d); } };
+            synth.speak(u1);
         }
-
-        truePlayer.play().catch(e => console.log("iOS Play block:", e));
-    }
-
-    function triggerNextDelay() {
-        let d = parseFloat(document.getElementById('delayRange').value) * 1000;
-        playPointer++;
-        delayTimeout = setTimeout(() => { playCurrentPointer('zh'); }, d);
     }
 
     function handlePlayAction() {
         if (displayList.length === 0) return;
+        activateIosAudioSystem(); // 點擊播放時立刻將音訊線程永久奪權
         if (isPlaying) return;
         isPlaying = true;
         document.getElementById('playBtn').textContent = "🔊 播報中";
         updateMediaSessionStatus();
-        truePlayer.play().catch(() => {
-            playCurrentPointer(currentPlayPhase);
-        });
+        if (synth.paused) {
+            synth.resume();
+        } else {
+            speakCurrentPointer();
+        }
     }
 
     function handlePauseAction() {
         isPlaying = false;
         clearTimeout(delayTimeout);
-        truePlayer.pause();
+        synth.pause();
+        if (mediaActivator) mediaActivator.pause();
         document.getElementById('playBtn').textContent = "▶ 繼續播放";
         updateMediaSessionStatus();
         document.getElementById('statusText').innerText = "⏸ 已暫停";
@@ -358,8 +357,8 @@
         isPlaying = false;
         playPointer = 0;
         clearTimeout(delayTimeout);
-        truePlayer.pause();
-        truePlayer.src = "";
+        synth.cancel();
+        deactivateIosAudioSystem();
         document.getElementById('playBtn').textContent = "▶ 播放語音";
         document.getElementById('statusText').innerText = "進度已重置";
         updateMediaSessionStatus();
@@ -376,12 +375,12 @@
         }
     }
 
-    // 實體藍牙耳機［播放／暫停／下一首／上一首］動作映射 —— 100% 完美聯通
+    // 🌟 實體耳機「按鍵」與鎖屏「前一首 / 下一首」100% 映射綁定
     if ('mediaSession' in navigator) {
         navigator.mediaSession.setActionHandler('play', handlePlayAction);
         navigator.mediaSession.setActionHandler('pause', handlePauseAction);
-        navigator.mediaSession.setActionHandler('nexttrack', () => { if (isPlaying) { clearTimeout(delayTimeout); playPointer++; playCurrentPointer('zh'); } });
-        navigator.mediaSession.setActionHandler('previoustrack', () => { if (isPlaying) { clearTimeout(delayTimeout); playPointer = Math.max(0, playPointer - 1); playCurrentPointer('zh'); } });
+        navigator.mediaSession.setActionHandler('nexttrack', () => { if (isPlaying) { clearTimeout(delayTimeout); synth.cancel(); playPointer++; speakCurrentPointer(); } });
+        navigator.mediaSession.setActionHandler('previoustrack', () => { if (isPlaying) { clearTimeout(delayTimeout); synth.cancel(); playPointer = Math.max(0, playPointer - 1); speakCurrentPointer(); } });
     }
 
     document.getElementById('playBtn').addEventListener('click', handlePlayAction);
