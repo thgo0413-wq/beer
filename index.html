@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>精釀啤酒考核語音系統</title>
+    <title>精釀啤酒考核語音系統 v2.0</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -13,57 +13,90 @@
             --text-muted: #b3b3b3;
             --highlight-bg: rgba(255, 183, 3, 0.15);
             --border-color: #333333;
+            --star-color: #ffb703;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; }
         body { background-color: var(--bg-color); color: var(--text-color); padding: 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        .container { width: 100%; max-width: 700px; background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
-        header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--accent-color); padding-bottom: 15px; }
+        .container { width: 100%; max-width: 750px; background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+        header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid var(--accent-color); padding-bottom: 12px; }
         header h1 { font-size: 22px; color: var(--accent-color); margin-bottom: 5px; }
-        .tab-group { display: flex; gap: 10px; margin-bottom: 15px; }
-        .tab-btn { flex: 1; background: #333; border: 1px solid var(--border-color); color: white; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        
+        .filter-panel { display: flex; gap: 8px; margin-bottom: 12px; }
+        .tab-btn { flex: 2; background: #333; border: 1px solid var(--border-color); color: white; padding: 10px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 13px; }
         .tab-btn.active { background: var(--accent-color); color: #121212; border-color: var(--accent-color); }
-        .control-panel { background: #181818; padding: 12px; border-radius: 8px; margin-bottom: 15px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; border: 1px solid var(--border-color); }
-        .btn-group { display: flex; gap: 8px; }
-        button.action-btn { background: #444; color: white; border: none; padding: 8px 16px; font-size: 13px; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        .fav-filter-btn { flex: 1; background: #222; border: 1px solid var(--border-color); color: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+        .fav-filter-btn.active { background: #e63946; border-color: #e63946; }
+
+        .control-panel { background: #181818; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; }
+        .panel-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+        .btn-group { display: flex; gap: 6px; flex: 1; min-width: 200px; }
+        button.action-btn { flex: 1; background: #444; color: white; border: none; padding: 10px 12px; font-size: 13px; font-weight: bold; border-radius: 4px; cursor: pointer; white-space: nowrap; }
         button.action-btn.primary { background: #e63946; }
         button.action-btn.go { background: #2a9d8f; }
-        .settings { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 13px; }
-        .beer-list { max-height: 55vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background: #161616; position: relative; }
-        .beer-item { display: grid; grid-template-columns: 40px 1.2fr 1fr; padding: 12px 12px; border-bottom: 1px solid var(--border-color); align-items: center; font-size: 14px; cursor: pointer; transition: background 0.1s; }
+        
+        .settings-group { display: flex; flex-wrap: wrap; gap: 12px; color: var(--text-muted); font-size: 13px; align-items: center; }
+        .settings-group label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        
+        .beer-list { max-height: 50vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background: #161616; position: relative; }
+        .beer-item { display: grid; grid-template-columns: 35px 35px 1.2fr 1fr; padding: 12px 8px; border-bottom: 1px solid var(--border-color); align-items: center; font-size: 14px; cursor: pointer; transition: background 0.1s; }
         .beer-item:active { background-color: #262626; }
-        .beer-item .no { color: var(--accent-color); font-weight: bold; }
-        .beer-item .zh { font-weight: 500; }
-        .beer-item .en { color: var(--text-muted); font-style: italic; }
+        
+        .beer-item .star-btn { color: #555; font-size: 18px; cursor: pointer; text-align: center; transition: transform 0.1s; }
+        .beer-item .star-btn.favored { color: var(--star-color); }
+        .beer-item .star-btn:active { transform: scale(1.3); }
+        
+        .beer-item .no { color: var(--accent-color); font-weight: bold; text-align: center; }
+        .beer-item .zh { font-weight: 500; transition: color 0.2s; }
+        .beer-item .en { color: var(--text-muted); font-style: italic; transition: color 0.2s; }
         .beer-item.playing { background-color: var(--highlight-bg); border-left: 4px solid var(--accent-color); color: #fff; }
-        .status-display { text-align: center; font-size: 15px; margin: 10px 0; min-height: 22px; color: var(--accent-color); font-weight: bold; }
+        
+        .quiz-mode .beer-item .zh:not(.revealed) { color: transparent; background: #444; border-radius: 4px; text-shadow: none; display: inline-block; min-width: 70px; height: 18px; }
+        .quiz-mode .beer-item .en:not(.revealed) { color: transparent; background: #444; border-radius: 4px; text-shadow: none; display: inline-block; min-width: 90px; height: 18px; }
+
+        .status-display { text-align: center; font-size: 14px; margin: 8px 0; min-height: 22px; color: var(--accent-color); font-weight: bold; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; }
+        .empty-tips { padding: 30px; text-align: center; color: var(--text-muted); font-size: 14px; }
     </style>
 </head>
 <body>
 <div class="container">
     <header>
-        <h1>🍻 精釀啤酒考核語音系統</h1>
+        <h1>🍻 精釀啤酒考核語音系統 v2.0</h1>
     </header>
-    <div class="tab-group">
+    
+    <div class="filter-panel">
         <button class="tab-btn active" id="tab1" onclick="switchGroup(1)">第一組 (01-50)</button>
         <button class="tab-btn" id="tab2" onclick="switchGroup(2)">第二組 (51-100)</button>
+        <button class="fav-filter-btn" id="favFilterBtn" onclick="toggleFavFilter()">🔍 只看⭐</button>
     </div>
+    
     <div class="control-panel">
-        <div class="btn-group">
-            <button id="playBtn" class="action-btn go">▶ 播放語音</button>
-            <button id="pauseBtn" class="action-btn">⏸ 暫停</button>
-            <button id="stopBtn" class="action-btn primary">⏹ 停止</button>
+        <div class="panel-row">
+            <div class="btn-group">
+                <button id="playBtn" class="action-btn go">▶ 播放語音</button>
+                <button id="pauseBtn" class="action-btn">⏸ 暫停</button>
+                <button id="stopBtn" class="action-btn primary">⏹ 停止</button>
+            </div>
+            <div class="settings-group">
+                <label>⏱️語速: <input type="range" id="rateRange" min="0.7" max="1.2" step="0.1" value="0.9" style="width:65px;"></label>
+                <label>⏱️間隔: <input type="range" id="delayRange" min="0.5" max="4.0" step="0.5" value="1.0" style="width:65px;"><span id="delayVal">1s</span></label>
+            </div>
         </div>
-        <div class="settings">
-            <label>⏱ 語速: <input type="range" id="rateRange" min="0.7" max="1.2" step="0.1" value="0.9" style="width:70px;"></label>
-            <label><input type="checkbox" id="loopCheck" checked> 🔁 循環</label>
+        <div class="panel-row" style="border-top: 1px solid #282828; padding-top: 8px;">
+            <div class="settings-group">
+                <label><input type="checkbox" id="loopCheck" checked> 🔁 循環播放</label>
+                <label><input type="checkbox" id="shuffleCheck" onchange="handleShuffleToggle()"> 🔀 隨機亂序</label>
+                <label style="color: #ffb703; font-weight: bold;"><input type="checkbox" id="quizCheck" onchange="handleQuizToggle()"> 🎯 盲聽測驗模式</label>
+            </div>
         </div>
     </div>
+    
     <div class="status-display" id="statusText">請點擊品名或播放按鈕開始</div>
     <div class="beer-list" id="listContainer"></div>
 </div>
+
 <script>
     const group1 = [
-        {no:1, zh:"艾比酒", en:"Abbey Ale"},{no:2, zh:"老啤酒", en:"Altbier"},{no:3, zh:"琥珀愛爾", en:"Amber Ale"},{no:4, zh:"美式IPA", en:"American IPA"},{no:5, zh:"美式淡愛爾", en:"American Pale Ale"},
+        {no:1, zh:"Alter酒", en:"Abbey Ale"},{no:2, zh:"老啤酒", en:"Altbier"},{no:3, zh:"琥珀愛爾", en:"Amber Ale"},{no:4, zh:"美式IPA", en:"American IPA"},{no:5, zh:"美式淡愛爾", en:"American Pale Ale"},
         {no:6, zh:"美式皮爾森", en:"American Pilsner"},{no:7, zh:"美式斯陶特", en:"American Stout"},{no:8, zh:"波羅地海波特", en:"Baltic Porter"},{no:9, zh:"大麥酒", en:"Barley Wine"},{no:10, zh:"桶陳", en:"Barrel Aged"},
         {no:11, zh:"比利時IPA", en:"Belgian IPA"},{no:12, zh:"比利時淡愛爾", en:"Belgian Pale Ale"},{no:13, zh:"比利時強黑愛爾", en:"Belgian Strong Dark"},{no:14, zh:"比利時強金愛爾", en:"Belgian Strong Gold"},{no:15, zh:"柏林小麥", en:"Berliner Weisse"},
         {no:16, zh:"最佳苦啤酒", en:"Best Bitter"},{no:17, zh:"蒸餾啤酒", en:"Bierbrand"},{no:18, zh:"苦啤酒", en:"Bitter"},{no:19, zh:"黑色IPA", en:"Black IPA"},{no:20, zh:"比利時黃金", en:"Blond"},
@@ -88,81 +121,167 @@
     ];
 
     let currentGroupNum = 1;
-    let beers = group1;
-    let currentIndex = 0;
+    let favorites = JSON.parse(localStorage.getItem('beer_favs')) || [];
+    let showFavOnly = false;
+    
+    let displayList = []; 
+    let playOrder = [];   
+    let playPointer = 0;  
+    
     let isPlaying = false;
     let synth = window.speechSynthesis;
     let speakTimeout = null;
 
+    document.getElementById('delayRange').addEventListener('input', (e) => {
+        document.getElementById('delayVal').innerText = parseFloat(e.target.value).toFixed(1) + 's';
+    });
+
+    function getRawGroupData() {
+        return currentGroupNum === 1 ? group1 : group2;
+    }
+
+    function prepareData() {
+        let rawData = getRawGroupData();
+        if (showFavOnly) {
+            displayList = rawData.filter(item => favorites.includes(item.no));
+        } else {
+            displayList = [...rawData];
+        }
+        generatePlayOrder();
+    }
+
+    function generatePlayOrder() {
+        playOrder = displayList.map((_, idx) => idx);
+        if (document.getElementById('shuffleCheck').checked) {
+            for (let i = playOrder.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [playOrder[i], playOrder[j]] = [playOrder[j], playOrder[i]];
+            }
+        }
+    }
+
     function renderList() {
+        prepareData();
         const container = document.getElementById('listContainer');
         container.innerHTML = '';
-        beers.forEach((beer, idx) => {
+        
+        if (displayList.length === 0) {
+            container.innerHTML = `<div class="empty-tips">🌟 該組別目前沒有收藏項目喔！</div>`;
+            return;
+        }
+
+        displayList.forEach((beer, idx) => {
+            const isFav = favorites.includes(beer.no);
             const item = document.createElement('div');
             item.className = 'beer-item';
             item.id = `beer-${idx}`;
-            item.innerHTML = `<div class="no">${String(beer.no).padStart(2,'0')}</div><div class="zh">${beer.zh}</div><div class="en">${beer.en}</div>`;
             
-            item.addEventListener('click', () => {
-                selectAndPlayBeer(idx);
+            item.innerHTML = `
+                <div class="star-btn ${isFav ? 'favored' : ''}" onclick="toggleFav(event, ${beer.no})">★</div>
+                <div class="no">${String(beer.no).padStart(2,'0')}</div>
+                <div class="zh" id="zh-${idx}">${beer.zh}</div>
+                <div class="en" id="en-${idx}">${beer.en}</div>
+            `;
+            
+            item.addEventListener('click', (e) => {
+                if (e.target.classList.contains('star-btn')) return;
+                
+                if (document.getElementById('quizCheck').checked) {
+                    const zhEl = document.getElementById(`zh-${idx}`);
+                    const enEl = document.getElementById(`en-${idx}`);
+                    if (zhEl && enEl) {
+                        zhEl.classList.toggle('revealed');
+                        enEl.classList.toggle('revealed');
+                    }
+                }
+                
+                const orderIndex = playOrder.indexOf(idx);
+                if (orderIndex !== -1) {
+                    selectAndPlayBeer(orderIndex);
+                }
             });
             
             container.appendChild(item);
         });
     }
 
+    function toggleFav(event, beerNo) {
+        event.stopPropagation();
+        if (favorites.includes(beerNo)) {
+            favorites = favorites.filter(no => no !== beerNo);
+        } else {
+            favorites.push(beerNo);
+        }
+        localStorage.setItem('beer_favs', JSON.stringify(favorites));
+        
+        if (showFavOnly) {
+            const wasPlaying = isPlaying;
+            stopPlayback();
+            renderList();
+            if (wasPlaying) handlePlayAction();
+        } else {
+            renderListKeepScroll();
+        }
+    }
+
+    function renderListKeepScroll() {
+        const scrollTop = document.getElementById('listContainer').scrollTop;
+        renderList();
+        document.getElementById('listContainer').scrollTop = scrollTop;
+    }
+
     function switchGroup(num) {
         stopPlayback();
         currentGroupNum = num;
-        beers = num === 1 ? group1 : group2;
         document.getElementById('tab1').classList.toggle('active', num === 1);
         document.getElementById('tab2').classList.toggle('active', num === 2);
         renderList();
     }
 
-    function highlightRow(index) {
+    function toggleFavFilter() {
+        stopPlayback();
+        showFavOnly = !showFavOnly;
+        document.getElementById('favFilterBtn').classList.toggle('active', showFavOnly);
+        document.getElementById('favFilterBtn').innerText = showFavOnly ? "★ 顯示全部" : "🔍 只看⭐";
+        renderList();
+    }
+
+    function handleShuffleToggle() {
+        const wasPlaying = isPlaying;
+        let currentBeer = isPlaying ? displayList[playOrder[playPointer]] : null;
+        
+        generatePlayOrder();
+        
+        if (currentBeer) {
+            let newIdx = displayList.indexOf(currentBeer);
+            playPointer = playOrder.indexOf(newIdx);
+        }
+    }
+
+    function handleQuizToggle() {
+        const container = document.getElementById('listContainer');
+        const isQuiz = document.getElementById('quizCheck').checked;
+        container.classList.toggle('quiz-mode', isQuiz);
+        document.querySelectorAll('.zh, .en').forEach(el => el.classList.remove('revealed'));
+    }
+
+    function highlightRow(listIdx) {
         document.querySelectorAll('.beer-item').forEach(el => el.classList.remove('playing'));
-        const el = document.getElementById(`beer-${index}`);
+        const el = document.getElementById(`beer-${listIdx}`);
         const list = document.getElementById('listContainer');
         
         if (el && list) {
             el.classList.add('playing');
-            
-            const elementOffsetTop = el.offsetTop;
-            const elementHeight = el.offsetHeight;
-            const listHeight = list.clientHeight;
-            
-            const targetScrollTop = elementOffsetTop - (listHeight / 2) + (elementHeight / 2);
-            
-            list.scrollTo({
-                top: targetScrollTop,
-                behavior: 'smooth'
-            });
+            const targetScrollTop = el.offsetTop - (list.clientHeight / 2) + (el.offsetHeight / 2);
+            list.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
         }
     }
 
-    function updateMediaSessionStatus() {
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
-        }
-    }
-
-    function setupMediaSession() {
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.setActionHandler('play', () => {
-                handlePlayAction();
-            });
-            navigator.mediaSession.setActionHandler('pause', () => {
-                handlePauseAction();
-            });
-        }
-    }
-
-    function selectAndPlayBeer(index) {
+    function selectAndPlayBeer(orderIdx) {
         synth.cancel();
         clearTimeout(speakTimeout);
         
-        currentIndex = index;
+        playPointer = orderIdx;
         isPlaying = true;
         document.getElementById('playBtn').textContent = "🔊 播報中";
         updateMediaSessionStatus();
@@ -171,43 +290,73 @@
     }
 
     function speakSequence() {
-        if (!isPlaying || currentIndex >= beers.length) {
-            if (currentIndex >= beers.length && document.getElementById('loopCheck').checked && isPlaying) {
-                currentIndex = 0;
+        if (!isPlaying || playPointer >= playOrder.length) {
+            if (playPointer >= playOrder.length && document.getElementById('loopCheck').checked && isPlaying) {
+                playPointer = 0;
                 speakSequence();
-            } else if (currentIndex >= beers.length) {
+            } else if (playPointer >= playOrder.length) {
                 stopPlayback();
                 document.getElementById('statusText').innerText = "🎉 本組考核播放完畢！";
             }
             return;
         }
 
-        const beer = beers[currentIndex];
-        document.getElementById('statusText').innerText = `📢 No.${beer.no} ${beer.zh}`;
-        highlightRow(currentIndex);
+        const listIdx = playOrder[playPointer];
+        const beer = displayList[listIdx];
+        if (!beer) return;
 
-        // 更新藍牙耳機控制面板上顯示的當前酒名
+        const isQuizMode = document.getElementById('quizCheck').checked;
+        
+        if (isQuizMode) {
+            document.getElementById('statusText').innerText = `🎯 盲聽測驗中：正在播放 No.${beer.no} 的英文 (聽完點擊該行看答案)`;
+        } else {
+            document.getElementById('statusText').innerText = `📢 No.${beer.no} ${beer.zh}`;
+        }
+        
+        highlightRow(listIdx);
+
         if ('mediaSession' in navigator) {
             navigator.mediaSession.metadata = new MediaMetadata({
-                title: `No.${beer.no} ${beer.zh}`,
+                title: isQuizMode ? `No.${beer.no} [盲聽測驗中]` : `No.${beer.no} ${beer.zh}`,
                 artist: beer.en,
-                album: "精釀啤酒考核語音系統"
+                album: "精釀啤酒考核語音系統 v2.0"
             });
         }
 
         let r = parseFloat(document.getElementById('rateRange').value);
-        let u1 = new SpeechSynthesisUtterance(beer.zh); u1.lang = 'zh-TW'; u1.rate = r;
-        let u2 = new SpeechSynthesisUtterance(beer.en); u2.lang = 'en-US'; u2.rate = r - 0.05;
-        let u3 = new SpeechSynthesisUtterance(beer.en); u3.lang = 'en-US'; u3.rate = r;
+        let d = parseFloat(document.getElementById('delayRange').value) * 1000; 
 
-        u1.onend = () => { if(isPlaying) speakTimeout = setTimeout(() => synth.speak(u2), 300); };
-        u2.onend = () => { if(isPlaying) speakTimeout = setTimeout(() => synth.speak(u3), 500); };
-        u3.onend = () => { if(isPlaying) { currentIndex++; speakTimeout = setTimeout(speakSequence, 1000); } };
+        if (isQuizMode) {
+            let u1 = new SpeechSynthesisUtterance(beer.en); u1.lang = 'en-US'; u1.rate = r;
+            let u2 = new SpeechSynthesisUtterance(beer.en); u2.lang = 'en-US'; u2.rate = r;
 
-        synth.speak(u1);
+            u1.onend = () => { if(isPlaying) speakTimeout = setTimeout(() => synth.speak(u2), 600); };
+            u2.onend = () => { 
+                if(isPlaying) { 
+                    playPointer++; 
+                    speakTimeout = setTimeout(speakSequence, d); 
+                } 
+            };
+            synth.speak(u1);
+        } else {
+            let u1 = new SpeechSynthesisUtterance(beer.zh); u1.lang = 'zh-TW'; u1.rate = r;
+            let u2 = new SpeechSynthesisUtterance(beer.en); u2.lang = 'en-US'; u2.rate = r - 0.05;
+            let u3 = new SpeechSynthesisUtterance(beer.en); u3.lang = 'en-US'; u3.rate = r;
+
+            u1.onend = () => { if(isPlaying) speakTimeout = setTimeout(() => synth.speak(u2), 300); };
+            u2.onend = () => { if(isPlaying) speakTimeout = setTimeout(() => synth.speak(u3), 500); };
+            u3.onend = () => { 
+                if(isPlaying) { 
+                    playPointer++; 
+                    speakTimeout = setTimeout(speakSequence, d); 
+                } 
+            };
+            synth.speak(u1);
+        }
     }
 
     function handlePlayAction() {
+        if (displayList.length === 0) return;
         if (isPlaying) return;
         isPlaying = true;
         document.getElementById('playBtn').textContent = "🔊 播報中";
@@ -224,17 +373,33 @@
         document.getElementById('statusText').innerText = "⏸ 已暫停";
     }
 
-    document.getElementById('playBtn').addEventListener('click', handlePlayAction);
-    document.getElementById('pauseBtn').addEventListener('click', handlePauseAction);
-
     function stopPlayback() {
-        isPlaying = false; currentIndex = 0;
+        isPlaying = false; playPointer = 0;
         synth.cancel(); clearTimeout(speakTimeout);
         document.getElementById('playBtn').textContent = "▶ 播放語音";
         document.getElementById('statusText').innerText = "進度已重置";
         updateMediaSessionStatus();
         document.querySelectorAll('.beer-item').forEach(el => el.classList.remove('playing'));
+        if(document.getElementById('quizCheck').checked) {
+            document.querySelectorAll('.zh, .en').forEach(el => el.classList.remove('revealed'));
+        }
     }
+
+    function updateMediaSessionStatus() {
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+        }
+    }
+
+    function setupMediaSession() {
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.setActionHandler('play', handlePlayAction);
+            navigator.mediaSession.setActionHandler('pause', handlePauseAction);
+        }
+    }
+
+    document.getElementById('playBtn').addEventListener('click', handlePlayAction);
+    document.getElementById('pauseBtn').addEventListener('click', handlePauseAction);
     document.getElementById('stopBtn').addEventListener('click', stopPlayback);
 
     renderList();
