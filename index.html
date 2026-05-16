@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>精釀啤酒考核語音系統 v2.1</title>
+    <title>精釀啤酒考核語音系統 v2.2</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -60,7 +60,7 @@
 <body>
 <div class="container">
     <header>
-        <h1>🍻 精釀啤酒考核語音系統 v2.1</h1>
+        <h1>🍻 精釀啤酒考核語音系統 v2.2</h1>
     </header>
     
     <div class="filter-panel">
@@ -94,7 +94,7 @@
     <div class="beer-list" id="listContainer"></div>
 </div>
 
-<audio id="silentTrack" loop src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==_SAMPLE_SILENCE_"></audio>
+<audio id="silentTrack" loop preload="auto" src="https://assets.mixkit.co/active_storage/sfx/2568/2568-1.wav" style="display:none;"></audio>
 
 <script>
     const group1 = [
@@ -132,24 +132,24 @@
     
     let isPlaying = false;
     let synth = window.speechSynthesis;
-    let speakTimeout = null;
     let silentAudio = document.getElementById('silentTrack');
+    
+    // 用來處理 iOS 關螢幕背景定時的黑科技變數
+    let nextSpeechTimestamp = 0;
+    let isWaitingNextSpeech = false;
+
+    // 音量調到最低近乎無聲 (0.01)，但絕對不設定為 mute，以此騙過 iOS
+    silentAudio.volume = 0.01;
 
     document.getElementById('delayRange').addEventListener('input', (e) => {
         document.getElementById('delayVal').innerText = parseFloat(e.target.value).toFixed(1) + 's';
     });
 
-    function getRawGroupData() {
-        return currentGroupNum === 1 ? group1 : group2;
-    }
+    function getRawGroupData() { return currentGroupNum === 1 ? group1 : group2; }
 
     function prepareData() {
         let rawData = getRawGroupData();
-        if (showFavOnly) {
-            displayList = rawData.filter(item => favorites.includes(item.no));
-        } else {
-            displayList = [...rawData];
-        }
+        displayList = showFavOnly ? rawData.filter(item => favorites.includes(item.no)) : [...rawData];
         generatePlayOrder();
     }
 
@@ -200,7 +200,6 @@
                 
                 const orderIndex = playOrder.indexOf(idx);
                 if (orderIndex !== -1) {
-                    // 使用者主動點擊時，一併激活無聲音訊機制
                     startSilentAudio();
                     selectAndPlayBeer(orderIndex);
                 }
@@ -254,9 +253,7 @@
     function handleShuffleToggle() {
         const wasPlaying = isPlaying;
         let currentBeer = isPlaying ? displayList[playOrder[playPointer]] : null;
-        
         generatePlayOrder();
-        
         if (currentBeer) {
             let newIdx = displayList.indexOf(currentBeer);
             playPointer = playOrder.indexOf(newIdx);
@@ -274,7 +271,6 @@
         document.querySelectorAll('.beer-item').forEach(el => el.classList.remove('playing'));
         const el = document.getElementById(`beer-${listIdx}`);
         const list = document.getElementById('listContainer');
-        
         if (el && list) {
             el.classList.add('playing');
             const targetScrollTop = el.offsetTop - (list.clientHeight / 2) + (el.offsetHeight / 2);
@@ -283,15 +279,24 @@
     }
 
     function startSilentAudio() {
-        // 利用使用者點擊事件觸發無聲真實音軌播放，繞過 iOS 限制
-        if (silentAudio.paused) {
-            silentAudio.play().catch(e => console.log("無聲音軌啟動被拒:", e));
-        }
+        // 解鎖 iOS 音訊通道的核心觸發點
+        silentAudio.play().then(() => {
+            // 每當無聲音樂進度前進，就由音軌硬體時鐘接管「關螢幕下」的播報排程
+            silentAudio.ontimeupdate = () => {
+                if (isPlaying && isWaitingNextSpeech) {
+                    let now = Date.now();
+                    if (now >= nextSpeechTimestamp) {
+                        isWaitingNextSpeech = false;
+                        speakSequence();
+                    }
+                }
+            };
+        }).catch(e => console.log("音訊軌道解鎖失敗:", e));
     }
 
     function selectAndPlayBeer(orderIdx) {
         synth.cancel();
-        clearTimeout(speakTimeout);
+        isWaitingNextSpeech = false;
         
         playPointer = orderIdx;
         isPlaying = true;
@@ -302,11 +307,13 @@
     }
 
     function speakSequence() {
-        if (!isPlaying || playPointer >= playOrder.length) {
-            if (playPointer >= playOrder.length && document.getElementById('loopCheck').checked && isPlaying) {
+        if (!isPlaying) return;
+
+        if (playPointer >= playOrder.length) {
+            if (document.getElementById('loopCheck').checked) {
                 playPointer = 0;
                 speakSequence();
-            } else if (playPointer >= playOrder.length) {
+            } else {
                 stopPlayback();
                 document.getElementById('statusText').innerText = "🎉 本組考核播放完畢！";
             }
@@ -320,7 +327,7 @@
         const isQuizMode = document.getElementById('quizCheck').checked;
         
         if (isQuizMode) {
-            document.getElementById('statusText').innerText = `🎯 盲聽測驗中：正在播放 No.${beer.no} 的英文 (聽完點擊該行看答案)`;
+            document.getElementById('statusText').innerText = `🎯 盲聽測驗：No.${beer.no} 英文播報中`;
         } else {
             document.getElementById('statusText').innerText = `📢 No.${beer.no} ${beer.zh}`;
         }
@@ -331,7 +338,7 @@
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: isQuizMode ? `No.${beer.no} [盲聽測驗中]` : `No.${beer.no} ${beer.zh}`,
                 artist: beer.en,
-                album: "精釀啤酒考核語音系統 v2.1"
+                album: "精釀啤酒考核語音系統 v2.2"
             });
         }
 
@@ -342,11 +349,13 @@
             let u1 = new SpeechSynthesisUtterance(beer.en); u1.lang = 'en-US'; u1.rate = r;
             let u2 = new SpeechSynthesisUtterance(beer.en); u2.lang = 'en-US'; u2.rate = r;
 
-            u1.onend = () => { if(isPlaying) speakTimeout = setTimeout(() => synth.speak(u2), 600); };
+            u1.onend = () => { if(isPlaying) synth.speak(u2); };
             u2.onend = () => { 
                 if(isPlaying) { 
                     playPointer++; 
-                    speakTimeout = setTimeout(speakSequence, d); 
+                    // 設定硬體時鐘排程，準備下一首
+                    nextSpeechTimestamp = Date.now() + d;
+                    isWaitingNextSpeech = true;
                 } 
             };
             synth.speak(u1);
@@ -355,12 +364,14 @@
             let u2 = new SpeechSynthesisUtterance(beer.en); u2.lang = 'en-US'; u2.rate = r - 0.05;
             let u3 = new SpeechSynthesisUtterance(beer.en); u3.lang = 'en-US'; u3.rate = r;
 
-            u1.onend = () => { if(isPlaying) speakTimeout = setTimeout(() => synth.speak(u2), 300); };
-            u2.onend = () => { if(isPlaying) speakTimeout = setTimeout(() => synth.speak(u3), 500); };
+            u1.onend = () => { if(isPlaying) synth.speak(u2); };
+            u2.onend = () => { if(isPlaying) synth.speak(u3); };
             u3.onend = () => { 
                 if(isPlaying) { 
                     playPointer++; 
-                    speakTimeout = setTimeout(speakSequence, d); 
+                    // 設定硬體時鐘排程，準備下一首
+                    nextSpeechTimestamp = Date.now() + d;
+                    isWaitingNextSpeech = true;
                 } 
             };
             synth.speak(u1);
@@ -371,33 +382,41 @@
         if (displayList.length === 0) return;
         if (isPlaying) return;
         
-        startSilentAudio(); // 啟動背景音轨機制
+        startSilentAudio(); 
         
         isPlaying = true;
         document.getElementById('playBtn').textContent = "🔊 播報中";
         updateMediaSessionStatus();
-        if (synth.paused) synth.resume(); else speakSequence();
+        if (synth.paused) {
+            synth.resume();
+        } else {
+            isWaitingNextSpeech = false;
+            speakSequence();
+        }
     }
 
     function handlePauseAction() {
         if (!isPlaying) return;
         isPlaying = false;
+        isWaitingNextSpeech = false;
         document.getElementById('playBtn').textContent = "▶ 繼續播放";
         
-        silentAudio.pause(); // 暫停背景無聲音軌
+        silentAudio.pause(); 
+        synth.cancel();
         
         updateMediaSessionStatus();
-        synth.cancel(); clearTimeout(speakTimeout);
         document.getElementById('statusText').innerText = "⏸ 已暫停";
     }
 
     function stopPlayback() {
-        isPlaying = false; playPointer = 0;
+        isPlaying = false; 
+        playPointer = 0;
+        isWaitingNextSpeech = false;
         
         silentAudio.pause();
         silentAudio.currentTime = 0;
+        synth.cancel(); 
         
-        synth.cancel(); clearTimeout(speakTimeout);
         document.getElementById('playBtn').textContent = "▶ 播放語音";
         document.getElementById('statusText').innerText = "進度已重置";
         updateMediaSessionStatus();
