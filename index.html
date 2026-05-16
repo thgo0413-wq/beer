@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>精釀啤酒考核語音系統 v3.0</title>
+    <title>精釀啤酒考核語音系統 v3.1</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -21,13 +21,13 @@
         header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid var(--accent-color); padding-bottom: 12px; }
         header h1 { font-size: 22px; color: var(--accent-color); margin-bottom: 5px; }
         
-        .filter-panel { display: flex; gap: 8px; margin-bottom: 12px; }
+        .filter-panel { display: flex; gap: 8px; margin-bottom: 12px; width: 100%; }
         .tab-btn { flex: 2; background: #333; border: 1px solid var(--border-color); color: white; padding: 10px; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 13px; }
         .tab-btn.active { background: var(--accent-color); color: #121212; border-color: var(--accent-color); }
         .fav-filter-btn { flex: 1; background: #222; border: 1px solid var(--border-color); color: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 4px; }
         .fav-filter-btn.active { background: #e63946; border-color: #e63946; }
 
-        .control-panel { background: #181818; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; }
+        .control-panel { background: #181818; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; width: 100%; }
         .panel-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
         .btn-group { display: flex; gap: 6px; flex: 1; min-width: 200px; }
         button.action-btn { flex: 1; background: #444; color: white; border: none; padding: 10px 12px; font-size: 13px; font-weight: bold; border-radius: 4px; cursor: pointer; white-space: nowrap; }
@@ -37,7 +37,7 @@
         .settings-group { display: flex; flex-wrap: wrap; gap: 12px; color: var(--text-muted); font-size: 13px; align-items: center; }
         .settings-group label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
         
-        .beer-list { max-height: 50vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background: #161616; position: relative; }
+        .beer-list { max-height: 50vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background: #161616; position: relative; width: 100%; }
         .beer-item { display: grid; grid-template-columns: 35px 35px 1.2fr 1fr; padding: 12px 8px; border-bottom: 1px solid var(--border-color); align-items: center; font-size: 14px; cursor: pointer; transition: background 0.1s; }
         .beer-item:active { background-color: #262626; }
         
@@ -53,14 +53,14 @@
         .quiz-mode .beer-item .zh:not(.revealed) { color: transparent; background: #444; border-radius: 4px; text-shadow: none; display: inline-block; min-width: 70px; height: 18px; }
         .quiz-mode .beer-item .en:not(.revealed) { color: transparent; background: #444; border-radius: 4px; text-shadow: none; display: inline-block; min-width: 90px; height: 18px; }
 
-        .status-display { text-align: center; font-size: 14px; margin: 8px 0; min-height: 22px; color: var(--accent-color); font-weight: bold; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; }
+        .status-display { text-align: center; font-size: 14px; margin: 8px 0; min-height: 22px; color: var(--accent-color); font-weight: bold; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px; width: 100%; }
         .empty-tips { padding: 30px; text-align: center; color: var(--text-muted); font-size: 14px; }
     </style>
 </head>
 <body>
 <div class="container">
     <header>
-        <h1>🍻 精釀啤酒考核語音系統 v3.0</h1>
+        <h1>🍻 精釀啤酒考核語音系統 v3.1</h1>
     </header>
     
     <div class="filter-panel">
@@ -142,15 +142,15 @@
 
     function getRawGroupData() { return currentGroupNum === 1 ? group1 : group2; }
 
+    // 修正：解耦初始化流程，加入嚴格防噴錯保護
     function prepareData() {
         let rawData = getRawGroupData();
         displayList = showFavOnly ? rawData.filter(item => favorites.includes(item.no)) : [...rawData];
-        generatePlayOrder();
-    }
-
-    function generatePlayOrder() {
+        
+        // 安全檢查，確保 DOM 元素存在才進行亂序
+        const shuffleEl = document.getElementById('shuffleCheck');
         playOrder = displayList.map((_, idx) => idx);
-        if (document.getElementById('shuffleCheck').checked) {
+        if (shuffleEl && shuffleEl.checked) {
             for (let i = playOrder.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
                 [playOrder[i], playOrder[j]] = [playOrder[j], playOrder[i]];
@@ -161,6 +161,7 @@
     function renderList() {
         prepareData();
         const container = document.getElementById('listContainer');
+        if (!container) return;
         container.innerHTML = '';
         
         if (displayList.length === 0) {
@@ -182,7 +183,8 @@
             
             item.addEventListener('click', (e) => {
                 if (e.target.classList.contains('star-btn')) return;
-                if (document.getElementById('quizCheck').checked) {
+                const quizEl = document.getElementById('quizCheck');
+                if (quizEl && quizEl.checked) {
                     document.getElementById(`zh-${idx}`).classList.toggle('revealed');
                     document.getElementById(`en-${idx}`).classList.toggle('revealed');
                 }
@@ -191,6 +193,10 @@
             });
             container.appendChild(item);
         });
+
+        // 重新套用當前的測驗模式外觀
+        const quizEl = document.getElementById('quizCheck');
+        if (quizEl) container.classList.toggle('quiz-mode', quizEl.checked);
     }
 
     function toggleFav(event, beerNo) {
@@ -208,7 +214,25 @@
 
     function switchGroup(num) { stopPlayback(); currentGroupNum = num; document.getElementById('tab1').classList.toggle('active', num === 1); document.getElementById('tab2').classList.toggle('active', num === 2); renderList(); }
     function toggleFavFilter() { stopPlayback(); showFavOnly = !showFavOnly; document.getElementById('favFilterBtn').classList.toggle('active', showFavOnly); document.getElementById('favFilterBtn').innerText = showFavOnly ? "★ 顯示全部" : "🔍 只看⭐"; renderList(); }
-    function handleShuffleToggle() { const wasPlaying = isPlaying; let currentBeer = isPlaying ? displayList[playOrder[playPointer]] : null; generatePlayOrder(); if (currentBeer) { playPointer = playOrder.indexOf(displayList.indexOf(currentBeer)); } }
+    
+    function handleShuffleToggle() { 
+        const wasPlaying = isPlaying; 
+        let currentBeer = isPlaying ? displayList[playOrder[playPointer]] : null; 
+        
+        // 重新計算順序
+        let rawData = getRawGroupData();
+        displayList = showFavOnly ? rawData.filter(item => favorites.includes(item.no)) : [...rawData];
+        playOrder = displayList.map((_, idx) => idx);
+        if (document.getElementById('shuffleCheck').checked) {
+            for (let i = playOrder.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [playOrder[i], playOrder[j]] = [playOrder[j], playOrder[i]];
+            }
+        }
+        
+        if (currentBeer) { playPointer = playOrder.indexOf(displayList.indexOf(currentBeer)); } 
+    }
+    
     function handleQuizToggle() { document.getElementById('listContainer').classList.toggle('quiz-mode', document.getElementById('quizCheck').checked); document.querySelectorAll('.zh, .en').forEach(el => el.classList.remove('revealed')); }
 
     function highlightRow(listIdx) {
@@ -221,7 +245,6 @@
         }
     }
 
-    // 取得高清晰雲端真實音訊網址 (利用字典庫公開接口)
     function getAudioUrl(text, lang) {
         return `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(text)}&le=${lang === 'zh-TW' ? 'zh' : 'eng'}`;
     }
@@ -254,28 +277,23 @@
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: isQuizMode ? `No.${beer.no} [盲聽測驗]` : `No.${beer.no} ${beer.zh}`,
                 artist: beer.en,
-                album: "精釀啤酒考核語音系統 v3.0"
+                album: "精釀啤酒考核語音系統 v3.1"
             });
         }
 
-        // 核心邏輯：用真實播放器的連鎖事件，徹底擊穿 iOS 鎖屏限制
         if (isQuizMode) {
             p1.src = getAudioUrl(beer.en, 'en-US');
             p2.src = getAudioUrl(beer.en, 'en-US');
             currentActivePlayer = p1;
-            
-            p1.onended = () => { if(isPlaying) { currentActivePlayer = p2; setTimeout(() => p2.play(), 600); } };
+            p1.onended = () => { if(isPlaying) { currentActivePlayer = p2; setTimeout(() => { if(isPlaying) p2.play().catch(e=>console.log(e)); }, 600); } };
             p2.onended = () => { if(isPlaying) triggerNextDelay(); };
-            
             p1.play().catch(e => console.log(e));
         } else {
             p1.src = getAudioUrl(beer.zh, 'zh-TW');
-            p2.src = getAudioUrl(`${beer.en}. ${beer.en}`, 'en-US'); // 連續朗讀兩次
+            p2.src = getAudioUrl(`${beer.en}. ${beer.en}`, 'en-US');
             currentActivePlayer = p1;
-
-            p1.onended = () => { if(isPlaying) { currentActivePlayer = p2; setTimeout(() => p2.play(), 400); } };
+            p1.onended = () => { if(isPlaying) { currentActivePlayer = p2; setTimeout(() => { if(isPlaying) p2.play().catch(e=>console.log(e)); }, 400); } };
             p2.onended = () => { if(isPlaying) triggerNextDelay(); };
-
             p1.play().catch(e => console.log(e));
         }
     }
@@ -283,7 +301,6 @@
     function triggerNextDelay() {
         let d = parseFloat(document.getElementById('delayRange').value) * 1000;
         playPointer++;
-        // 在背景或關螢幕下，利用真實音軌觸發的定時依然具備高優先級
         delayTimeout = setTimeout(playCurrentPointer, d);
     }
 
@@ -294,7 +311,7 @@
         document.getElementById('playBtn').textContent = "🔊 播報中";
         updateMediaSessionStatus();
         if (currentActivePlayer && currentActivePlayer.src) {
-            currentActivePlayer.play();
+            currentActivePlayer.play().catch(e=>console.log(e));
         } else {
             playCurrentPointer();
         }
@@ -318,15 +335,16 @@
         document.getElementById('statusText').innerText = "進度已重置";
         updateMediaSessionStatus();
         document.querySelectorAll('.beer-item').forEach(el => el.classList.remove('playing'));
-        if(document.getElementById('quizCheck').checked) {
+        const quizEl = document.getElementById('quizCheck');
+        if(quizEl && quizEl.checked) {
             document.querySelectorAll('.zh, .en').forEach(el => el.classList.remove('revealed'));
         }
     }
 
     function stopAllAudio() {
         clearTimeout(delayTimeout);
-        p1.pause(); p1.src = ""; p1.onended = null;
-        p2.pause(); p2.src = ""; p2.onended = null;
+        if(p1) { p1.pause(); p1.src = ""; p1.onended = null; }
+        if(p2) { p2.pause(); p2.src = ""; p2.onended = null; }
         currentActivePlayer = null;
     }
 
@@ -338,4 +356,17 @@
 
     if ('mediaSession' in navigator) {
         navigator.mediaSession.setActionHandler('play', handlePlayAction);
-        navigator.mediaSession.setActionHandler('pause',
+        navigator.mediaSession.setActionHandler('pause', handlePauseAction);
+    }
+
+    document.getElementById('playBtn').addEventListener('click', handlePlayAction);
+    document.getElementById('pauseBtn').addEventListener('click', handlePauseAction);
+    document.getElementById('stopBtn').addEventListener('click', stopPlayback);
+
+    // 確保全部 DOM 加載完畢才進行首次渲染
+    window.addEventListener('DOMContentLoaded', () => {
+        renderList();
+    });
+</script>
+</body>
+</html>
