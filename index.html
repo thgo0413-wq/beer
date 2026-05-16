@@ -141,6 +141,23 @@
         }
     }
 
+    function updateMediaSessionStatus() {
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+        }
+    }
+
+    function setupMediaSession() {
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.setActionHandler('play', () => {
+                handlePlayAction();
+            });
+            navigator.mediaSession.setActionHandler('pause', () => {
+                handlePauseAction();
+            });
+        }
+    }
+
     function selectAndPlayBeer(index) {
         synth.cancel();
         clearTimeout(speakTimeout);
@@ -148,6 +165,7 @@
         currentIndex = index;
         isPlaying = true;
         document.getElementById('playBtn').textContent = "🔊 播報中";
+        updateMediaSessionStatus();
         
         speakSequence();
     }
@@ -168,6 +186,15 @@
         document.getElementById('statusText').innerText = `📢 No.${beer.no} ${beer.zh}`;
         highlightRow(currentIndex);
 
+        // 更新藍牙耳機控制面板上顯示的當前酒名
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: `No.${beer.no} ${beer.zh}`,
+                artist: beer.en,
+                album: "精釀啤酒考核語音系統"
+            });
+        }
+
         let r = parseFloat(document.getElementById('rateRange').value);
         let u1 = new SpeechSynthesisUtterance(beer.zh); u1.lang = 'zh-TW'; u1.rate = r;
         let u2 = new SpeechSynthesisUtterance(beer.en); u2.lang = 'en-US'; u2.rate = r - 0.05;
@@ -180,31 +207,38 @@
         synth.speak(u1);
     }
 
-    document.getElementById('playBtn').addEventListener('click', () => {
+    function handlePlayAction() {
         if (isPlaying) return;
         isPlaying = true;
         document.getElementById('playBtn').textContent = "🔊 播報中";
+        updateMediaSessionStatus();
         if (synth.paused) synth.resume(); else speakSequence();
-    });
+    }
 
-    document.getElementById('pauseBtn').addEventListener('click', () => {
+    function handlePauseAction() {
         if (!isPlaying) return;
         isPlaying = false;
         document.getElementById('playBtn').textContent = "▶ 繼續播放";
+        updateMediaSessionStatus();
         synth.cancel(); clearTimeout(speakTimeout);
         document.getElementById('statusText').innerText = "⏸ 已暫停";
-    });
+    }
+
+    document.getElementById('playBtn').addEventListener('click', handlePlayAction);
+    document.getElementById('pauseBtn').addEventListener('click', handlePauseAction);
 
     function stopPlayback() {
         isPlaying = false; currentIndex = 0;
         synth.cancel(); clearTimeout(speakTimeout);
         document.getElementById('playBtn').textContent = "▶ 播放語音";
         document.getElementById('statusText').innerText = "進度已重置";
+        updateMediaSessionStatus();
         document.querySelectorAll('.beer-item').forEach(el => el.classList.remove('playing'));
     }
     document.getElementById('stopBtn').addEventListener('click', stopPlayback);
 
     renderList();
+    setupMediaSession();
 </script>
 </body>
 </html>
