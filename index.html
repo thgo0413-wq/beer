@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>精釀啤酒考核語音系統 v2.0</title>
+    <title>精釀啤酒考核語音系統 v2.1</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -60,7 +60,7 @@
 <body>
 <div class="container">
     <header>
-        <h1>🍻 精釀啤酒考核語音系統 v2.0</h1>
+        <h1>🍻 精釀啤酒考核語音系統 v2.1</h1>
     </header>
     
     <div class="filter-panel">
@@ -94,9 +94,11 @@
     <div class="beer-list" id="listContainer"></div>
 </div>
 
+<audio id="silentTrack" loop src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==_SAMPLE_SILENCE_"></audio>
+
 <script>
     const group1 = [
-        {no:1, zh:"Alter酒", en:"Abbey Ale"},{no:2, zh:"老啤酒", en:"Altbier"},{no:3, zh:"琥珀愛爾", en:"Amber Ale"},{no:4, zh:"美式IPA", en:"American IPA"},{no:5, zh:"美式淡愛爾", en:"American Pale Ale"},
+        {no:1, zh:"艾比酒", en:"Abbey Ale"},{no:2, zh:"老啤酒", en:"Altbier"},{no:3, zh:"琥珀愛爾", en:"Amber Ale"},{no:4, zh:"美式IPA", en:"American IPA"},{no:5, zh:"美式淡愛爾", en:"American Pale Ale"},
         {no:6, zh:"美式皮爾森", en:"American Pilsner"},{no:7, zh:"美式斯陶特", en:"American Stout"},{no:8, zh:"波羅地海波特", en:"Baltic Porter"},{no:9, zh:"大麥酒", en:"Barley Wine"},{no:10, zh:"桶陳", en:"Barrel Aged"},
         {no:11, zh:"比利時IPA", en:"Belgian IPA"},{no:12, zh:"比利時淡愛爾", en:"Belgian Pale Ale"},{no:13, zh:"比利時強黑愛爾", en:"Belgian Strong Dark"},{no:14, zh:"比利時強金愛爾", en:"Belgian Strong Gold"},{no:15, zh:"柏林小麥", en:"Berliner Weisse"},
         {no:16, zh:"最佳苦啤酒", en:"Best Bitter"},{no:17, zh:"蒸餾啤酒", en:"Bierbrand"},{no:18, zh:"苦啤酒", en:"Bitter"},{no:19, zh:"黑色IPA", en:"Black IPA"},{no:20, zh:"比利時黃金", en:"Blond"},
@@ -131,6 +133,7 @@
     let isPlaying = false;
     let synth = window.speechSynthesis;
     let speakTimeout = null;
+    let silentAudio = document.getElementById('silentTrack');
 
     document.getElementById('delayRange').addEventListener('input', (e) => {
         document.getElementById('delayVal').innerText = parseFloat(e.target.value).toFixed(1) + 's';
@@ -197,6 +200,8 @@
                 
                 const orderIndex = playOrder.indexOf(idx);
                 if (orderIndex !== -1) {
+                    // 使用者主動點擊時，一併激活無聲音訊機制
+                    startSilentAudio();
                     selectAndPlayBeer(orderIndex);
                 }
             });
@@ -277,6 +282,13 @@
         }
     }
 
+    function startSilentAudio() {
+        // 利用使用者點擊事件觸發無聲真實音軌播放，繞過 iOS 限制
+        if (silentAudio.paused) {
+            silentAudio.play().catch(e => console.log("無聲音軌啟動被拒:", e));
+        }
+    }
+
     function selectAndPlayBeer(orderIdx) {
         synth.cancel();
         clearTimeout(speakTimeout);
@@ -319,7 +331,7 @@
             navigator.mediaSession.metadata = new MediaMetadata({
                 title: isQuizMode ? `No.${beer.no} [盲聽測驗中]` : `No.${beer.no} ${beer.zh}`,
                 artist: beer.en,
-                album: "精釀啤酒考核語音系統 v2.0"
+                album: "精釀啤酒考核語音系統 v2.1"
             });
         }
 
@@ -358,6 +370,9 @@
     function handlePlayAction() {
         if (displayList.length === 0) return;
         if (isPlaying) return;
+        
+        startSilentAudio(); // 啟動背景音轨機制
+        
         isPlaying = true;
         document.getElementById('playBtn').textContent = "🔊 播報中";
         updateMediaSessionStatus();
@@ -368,6 +383,9 @@
         if (!isPlaying) return;
         isPlaying = false;
         document.getElementById('playBtn').textContent = "▶ 繼續播放";
+        
+        silentAudio.pause(); // 暫停背景無聲音軌
+        
         updateMediaSessionStatus();
         synth.cancel(); clearTimeout(speakTimeout);
         document.getElementById('statusText').innerText = "⏸ 已暫停";
@@ -375,6 +393,10 @@
 
     function stopPlayback() {
         isPlaying = false; playPointer = 0;
+        
+        silentAudio.pause();
+        silentAudio.currentTime = 0;
+        
         synth.cancel(); clearTimeout(speakTimeout);
         document.getElementById('playBtn').textContent = "▶ 播放語音";
         document.getElementById('statusText').innerText = "進度已重置";
