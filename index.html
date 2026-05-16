@@ -19,7 +19,6 @@
         .container { width: 100%; max-width: 700px; background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
         header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--accent-color); padding-bottom: 15px; }
         header h1 { font-size: 22px; color: var(--accent-color); margin-bottom: 5px; }
-        header p { color: var(--text-muted); font-size: 13px; }
         .tab-group { display: flex; gap: 10px; margin-bottom: 15px; }
         .tab-btn { flex: 1; background: #333; border: 1px solid var(--border-color); color: white; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
         .tab-btn.active { background: var(--accent-color); color: #121212; border-color: var(--accent-color); }
@@ -30,7 +29,8 @@
         button.action-btn.go { background: #2a9d8f; }
         .settings { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: 13px; }
         .beer-list { max-height: 55vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; background: #161616; }
-        .beer-item { display: grid; grid-template-columns: 40px 1.2fr 1fr; padding: 10px 12px; border-bottom: 1px solid var(--border-color); align-items: center; font-size: 14px; }
+        .beer-item { display: grid; grid-template-columns: 40px 1.2fr 1fr; padding: 12px 12px; border-bottom: 1px solid var(--border-color); align-items: center; font-size: 14px; cursor: pointer; transition: background 0.1s; }
+        .beer-item:active { background-color: #262626; }
         .beer-item .no { color: var(--accent-color); font-weight: bold; }
         .beer-item .zh { font-weight: 500; }
         .beer-item .en { color: var(--text-muted); font-style: italic; }
@@ -42,7 +42,6 @@
 <div class="container">
     <header>
         <h1>🍻 精釀啤酒考核語音系統</h1>
-
     </header>
     <div class="tab-group">
         <button class="tab-btn active" id="tab1" onclick="switchGroup(1)">第一組 (01-50)</button>
@@ -59,7 +58,7 @@
             <label><input type="checkbox" id="loopCheck" checked> 🔁 循環</label>
         </div>
     </div>
-    <div class="status-display" id="statusText">請點擊播放語音開始</div>
+    <div class="status-display" id="statusText">請點擊品名或播放按鈕開始</div>
     <div class="beer-list" id="listContainer"></div>
 </div>
 <script>
@@ -84,7 +83,7 @@
         {no:76, zh:"南太平洋淡愛爾", en:"Pacific Pale Ale"},{no:77, zh:"梨子西打酒", en:"Perry"},{no:78, zh:"皮爾森", en:"Pilsner"},{no:79, zh:"波特", en:"Porter"},{no:80, zh:"頂級苦啤酒", en:"Premium Bitter"},
         {no:81, zh:"南瓜愛爾", en:"Pumpkin Ale"},{no:82, zh:"比利時四倍", en:"Quadrupel"},{no:83, zh:"蘇打啤酒", en:"Radler"},{no:84, zh:"煙燻啤酒", en:"Rauchbier"},{no:85, zh:"紅色IPA", en:"Red IPA"},
         {no:86, zh:"裸麥愛爾", en:"Rye Ale"},{no:87, zh:"季節啤酒", en:"Saison"},{no:88, zh:"深黑拉格", en:"Schwarzbier"},{no:89, zh:"蘇格蘭愛爾", en:"Scotch Ale"},{no:90, zh:"社交IPA", en:"Session IPA"},
-        {no:91, zh:"酸愛爾", en:"Sour Ale"},{no:92, zh:"蒸氣啤酒", en:"Steam Beer"},{no:93, zh:"修道院", en:"Trappist"},{no:94, zh:"比利時三倍", en:"Tripel"},{no:95, zh:"維也納", en:"Vienna"},
+        {no:91, zh:"酸愛爾", en:"Sour Ale"},{no:92, zh:"蒸氣啤酒", en:"Steam Beer"},{no:93, zh:"修道院", en:"Trappist"},{no:94, zh:"比利時官方三倍", en:"Tripel"},{no:95, zh:"維也納", en:"Vienna"},
         {no:96, zh:"小麥勃克", en:"Weizenbock"},{no:97, zh:"小麥愛爾", en:"Wheat Ale"},{no:98, zh:"白色IPA", en:"White IPA"},{no:99, zh:"冬季啤酒", en:"Winter Warmer"},{no:100, zh:"白啤酒", en:"Witbier"}
     ];
 
@@ -103,6 +102,12 @@
             item.className = 'beer-item';
             item.id = `beer-${idx}`;
             item.innerHTML = `<div class="no">${String(beer.no).padStart(2,'0')}</div><div class="zh">${beer.zh}</div><div class="en">${beer.en}</div>`;
+            
+            // 新增點擊事件：隨點隨播
+            item.addEventListener('click', () => {
+                selectAndPlayBeer(idx);
+            });
+            
             container.appendChild(item);
         });
     }
@@ -123,6 +128,20 @@
             el.classList.add('playing');
             el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         }
+    }
+
+    function selectAndPlayBeer(index) {
+        // 停止當前播放
+        synth.cancel();
+        clearTimeout(speakTimeout);
+        
+        // 切換進度
+        currentIndex = index;
+        isPlaying = true;
+        document.getElementById('playBtn').textContent = "🔊 播報中";
+        
+        // 開始播放選中的項目
+        speakSequence();
     }
 
     function speakSequence() {
