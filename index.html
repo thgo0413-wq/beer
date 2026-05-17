@@ -48,22 +48,23 @@
         .quiz-mode .beer-item .zh:not(.revealed) { color: transparent; background: #444; border-radius: 4px; }
         .quiz-mode .beer-item .en:not(.revealed) { color: transparent; background: #444; border-radius: 4px; }
 
-        /* 完美置中與美化播報顯示欄位 */
+        /* 確保當前播放品名完美水平、垂直置中，且換行依然美觀 */
         .status-display { 
             text-align: center; 
             font-size: 15px; 
             margin-bottom: 12px; 
-            min-height: 44px; 
+            min-height: 50px; 
             color: var(--accent-color); 
             font-weight: bold; 
             background: rgba(0,0,0,0.4); 
-            padding: 8px 15px; 
+            padding: 10px 15px; 
             border-radius: 8px; 
             display: flex; 
+            flex-direction: column;
             align-items: center; 
             justify-content: center; 
             border: 1px dashed #555;
-            line-height: 1.4;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -188,6 +189,7 @@
         if(displayList.length === 0) return;
         isPlaying = true;
         synth.cancel();
+        clearTimeout(delayTimeout);
         speak();
     }
 
@@ -195,7 +197,7 @@
         isPlaying = false;
         clearTimeout(delayTimeout);
         synth.cancel();
-        document.getElementById('statusText').innerText = "⏸ 語音播報已暫停";
+        document.getElementById('statusText').innerHTML = "<div>⏸ 語音播報已暫停</div>";
     }
 
     function stopPlayback() {
@@ -203,7 +205,7 @@
         playPointer = 0;
         clearTimeout(delayTimeout);
         synth.cancel();
-        document.getElementById('statusText').innerText = "請點擊下方品名或點播放按鈕開始";
+        document.getElementById('statusText').innerHTML = "<div>請點擊下方品名或點播放按鈕開始</div>";
         document.querySelectorAll('.beer-item').forEach(el=>el.classList.remove('playing'));
     }
 
@@ -225,9 +227,22 @@
         }
 
         const isQuizMode = document.getElementById('quizCheck').checked;
-        document.getElementById('statusText').innerText = isQuizMode ? `🎯 盲聽測驗模式：正在播報 No.${beer.no}` : `正在播報: No.${beer.no}\n${beer.zh} (${beer.en})`;
+        
+        // 核心修正：將品名狀態欄完美置中，分行呈現，提升大螢幕與手機端的 scannability
+        if (isQuizMode) {
+            document.getElementById('statusText').innerHTML = `
+                <div style="font-size:13px; color:var(--text-muted);">🎯 盲聽測驗模式</div>
+                <div style="font-size:18px; margin-top:2px;">播報中：No.${String(beer.no).padStart(2,'0')}</div>
+            `;
+        } else {
+            document.getElementById('statusText').innerHTML = `
+                <div style="font-size:13px; color:var(--text-muted);">正在播報 No.${String(beer.no).padStart(2,'0')}</div>
+                <div style="font-size:18px; margin-top:2px; color:#fff;">${beer.zh}</div>
+                <div style="font-size:14px; font-style:italic; color:var(--accent-color);">${beer.en}</div>
+            `;
+        }
 
-        // 徹底解決 iOS 語音互相掐斷的寫法：將兩段語音分開、給予充足緩衝
+        // 核心語音隊列修正：使用 iOS 最穩定的原生隊列，拒絕用計時器強行插隊
         let u1, u2;
         if (isQuizMode) {
             u1 = new SpeechSynthesisUtterance(beer.en); u1.lang = 'en-US'; u1.rate = 0.85;
@@ -235,32 +250,43 @@
             
             u1.onend = () => { 
                 if(isPlaying) {
+                    // 盲聽留白：考生的思考時間
                     delayTimeout = setTimeout(() => {
-                        if(activeRow) activeRow.querySelectorAll('.zh, .en').forEach(el=>el.classList.add('revealed'));
-                        synth.speak(u2);
+                        if(isPlaying) {
+                            if(activeRow) activeRow.querySelectorAll('.zh, .en').forEach(el=>el.classList.add('revealed'));
+                            synth.speak(u2);
+                        }
                     }, 2000); 
                 } 
             };
-            u2.onend = () => { if(isPlaying) { playPointer++; delayTimeout = setTimeout(speak, 1500); } };
+            u2.onend = () => { 
+                if(isPlaying) { 
+                    playPointer++; 
+                    delayTimeout = setTimeout(speak, 1200); 
+                } 
+            };
             synth.speak(u1);
         } else {
             u1 = new SpeechSynthesisUtterance(beer.zh); u1.lang = 'zh-TW'; u1.rate = 0.9;
             u2 = new SpeechSynthesisUtterance(beer.en); u2.lang = 'en-US'; u2.rate = 0.85;
             
+            // 完美鏈接：中文唸完，立刻接英文；英文唸完，再準備下一首
             u1.onend = () => { 
                 if(isPlaying) {
-                    // 給 iOS 0.3 秒稍微喘息，再啟動英文，確保英文不被割斷
-                    delayTimeout = setTimeout(() => {
-                        if(isPlaying) synth.speak(u2);
-                    }, 3000);
+                    synth.speak(u2);
                 } 
             };
-            u2.onend = () => { if(isPlaying) { playPointer++; delayTimeout = setTimeout(speak, 1500); } };
+            u2.onend = () => { 
+                if(isPlaying) { 
+                    playPointer++; 
+                    delayTimeout = setTimeout(speak, 1200); // 每一首之間留 1.2 秒空白
+                } 
+            };
             synth.speak(u1);
         }
     }
 
-    document.getElementById('playBtn').addEventListener('click', startPlayback);
+    // 核心修正：移除重複的事件監聽器，確保不重疊
     document.getElementById('playBtn').addEventListener('click', startPlayback);
     document.getElementById('pauseBtn').addEventListener('click', pausePlayback);
     document.getElementById('stopBtn').addEventListener('click', stopPlayback);
