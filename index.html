@@ -64,8 +64,8 @@
     </header>
     
     <div class="filter-panel">
-        <button class="tab-btn active" id="tab1" onclick="switchGroup(1)">第一組 (01-50)</button>
-        <button class="tab-btn" id="tab2" onclick="switchGroup(2)">第二組 (51-100)</button>
+        <button class="tab-btn active" id="tab1" onclick="switchSortMode('alpha')">字母排序</button>
+        <button class="tab-btn" id="tab2" onclick="switchSortMode('category')">分類排序</button>
         <button class="fav-filter-btn" id="favFilterBtn" onclick="toggleFavFilter()">🔍 ⭐</button>
     </div>
 
@@ -100,7 +100,8 @@
 </div>
 
 <script>
-    const group1 = [
+    // 原始 100 項字母 A-Z 順序 (94 號已正名為 Tripel)
+    const alphaList = [
         {no:1, zh:"艾比酒", en:"Abbey Ale"},{no:2, zh:"老啤酒", en:"Altbier"},{no:3, zh:"琥珀愛爾", en:"Amber Ale"},{no:4, zh:"美式IPA", en:"American IPA"},{no:5, zh:"美式淡愛爾", en:"American Pale Ale"},
         {no:6, zh:"美式皮爾森", en:"American Pilsner"},{no:7, zh:"美式斯陶特", en:"American Stout"},{no:8, zh:"波羅地海波特", en:"Baltic Porter"},{no:9, zh:"大麥酒", en:"Barley Wine"},{no:10, zh:"桶陳", en:"Barrel Aged"},
         {no:11, zh:"比利時IPA", en:"Belgian IPA"},{no:12, zh:"比利時淡愛爾", en:"Belgian Pale Ale"},{no:13, zh:"比利時強黑愛爾", en:"Belgian Strong Dark"},{no:14, zh:"比利時強金愛爾", en:"Belgian Strong Gold"},{no:15, zh:"柏林小麥", en:"Berliner Weisse"},
@@ -110,9 +111,7 @@
         {no:31, zh:"捷克皮爾森", en:"Czech Pilsner"},{no:32, zh:"雙倍勃克", en:"Doppelbock"},{no:33, zh:"多特蒙德出口型拉格", en:"Dortmunder Export"},{no:34, zh:"雙倍IPA", en:"Double IPA"},{no:35, zh:"比利時雙倍", en:"Dubbel"},
         {no:36, zh:"黑拉格", en:"Dunkel"},{no:37, zh:"黑小麥", en:"Dunkelweizen"},{no:38, zh:"冰勃克", en:"Eisbock"},{no:39, zh:"特殊苦啤酒", en:"Extra Special Bitter"},{no:40, zh:"農舍愛爾", en:"Farmhouse Ale"},
         {no:41, zh:"黑糖蘭比克", en:"Faro"},{no:42, zh:"法蘭德斯紅愛爾", en:"Flanders Red Ale"},{no:43, zh:"法蘭德斯棕愛爾", en:"Flemish Oud Bruin"},{no:44, zh:"水果愛爾", en:"Fruit Ale"},{no:45, zh:"水果蘭比克", en:"Fruit Lambic"},
-        {no:46, zh:"水果白啤酒", en:"Fruit Witbier"},{no:47, zh:"德式皮爾森", en:"German Pilsner"},{no:48, zh:"無麩質啤酒", en:"Gluten Free"},{no:49, zh:"英式金愛爾", en:"Golden Ale"},{no:50, zh:"鹽小麥", en:"Gose"}
-    ];
-    const group2 = [
+        {no:46, zh:"水果白啤酒", en:"Fruit Witbier"},{no:47, zh:"德式皮爾森", en:"German Pilsner"},{no:48, zh:"無麩質啤酒", en:"Gluten Free"},{no:49, zh:"英式金愛爾", en:"Golden Ale"},{no:50, zh:"鹽小麥", en:"Gose"},
         {no:51, zh:"古魯特", en:"Gruit"},{no:52, zh:"香檳啤酒", en:"Gueuze"},{no:53, zh:"酵母小麥", en:"Hefeweizen"},{no:54, zh:"帝國IPA", en:"Imperial IPA"},{no:55, zh:"帝國斯陶特", en:"Imperial Stout"},
         {no:56, zh:"印度式淡愛爾", en:"India Pale Ale"},{no:57, zh:"印度式淡拉格", en:"IPL"},{no:58, zh:"愛爾蘭紅愛爾", en:"Irish Red Ale"},{no:59, zh:"愛爾蘭斯陶特", en:"Irish Stout"},{no:60, zh:"原漿啤酒", en:"Kellerbier"},
         {no:61, zh:"科隆", en:"Kolsch"},{no:62, zh:"比利時櫻桃啤酒", en:"Kriek"},{no:63, zh:"水晶小麥", en:"Kristallweizen"},{no:64, zh:"蘭比克", en:"Lambic"},{no:65, zh:"五月勃克", en:"Maibock"},
@@ -121,23 +120,57 @@
         {no:76, zh:"南太平洋淡愛爾", en:"Pacific Pale Ale"},{no:77, zh:"梨子西打酒", en:"Perry"},{no:78, zh:"皮爾森", en:"Pilsner"},{no:79, zh:"波特", en:"Porter"},{no:80, zh:"頂級苦啤酒", en:"Premium Bitter"},
         {no:81, zh:"南瓜愛爾", en:"Pumpkin Ale"},{no:82, zh:"比利時四倍", en:"Quadrupel"},{no:83, zh:"蘇打啤酒", en:"Radler"},{no:84, zh:"煙燻啤酒", en:"Rauchbier"},{no:85, zh:"紅色IPA", en:"Red IPA"},
         {no:86, zh:"裸麥愛爾", en:"Rye Ale"},{no:87, zh:"季節啤酒", en:"Saison"},{no:88, zh:"深黑拉格", en:"Schwarzbier"},{no:89, zh:"蘇格蘭愛爾", en:"Scotch Ale"},{no:90, zh:"社交IPA", en:"Session IPA"},
-        {no:91, zh:"酸愛爾", en:"Sour Ale"},{no:92, zh:"蒸氣啤酒", en:"Steam Beer"},{no:93, zh:"修道院", en:"Trappist"},{no:94, zh:"比利時雙倍", en:"Tripel"},{no:95, zh:"維也納", en:"Vienna"},
+        {no:91, zh:"酸愛爾", en:"Sour Ale"},{no:92, zh:"蒸氣啤酒", en:"Steam Beer"},{no:93, zh:"修道院", en:"Trappist"},{no:94, zh:"比利時三倍", en:"Tripel"},{no:95, zh:"維也納", en:"Vienna"},
         {no:96, zh:"小麥勃克", en:"Weizenbock"},{no:97, zh:"小麥愛爾", en:"Wheat Ale"},{no:98, zh:"白色IPA", en:"White IPA"},{no:99, zh:"冬季啤酒", en:"Winter Warmer"},{no:100, zh:"白啤酒", en:"Witbier"}
     ];
 
-    let currentGroupNum = 1;
+    // 親緣邏輯分類順序 (100項無漏無重複)
+    const categoryList = [
+        // 1. 基礎愛爾與英式傳統苦啤家族
+        {no:3, zh:"琥珀愛爾", en:"Amber Ale"},{no:97, zh:"小麥愛爾", en:"Wheat Ale"},{no:18, zh:"苦啤酒", en:"Bitter"},{no:16, zh:"最佳苦啤酒", en:"Best Bitter"},{no:80, zh:"頂級苦啤酒", en:"Premium Bitter"},{no:39, zh:"特殊苦啤酒", en:"Extra Special Bitter"},{no:24, zh:"布頓愛爾", en:"Burton Ale"},{no:74, zh:"老愛爾", en:"Old Ale"},{no:26, zh:"木桶愛爾", en:"Cask Ale"},
+        // 2. 各地傳統淡愛爾家族
+        {no:5, zh:"美式淡愛爾", en:"American Pale Ale"},{no:76, zh:"南太平洋淡愛爾", en:"Pacific Pale Ale"},{no:12, zh:"比利時淡愛爾", en:"Belgian Pale Ale"},{no:58, zh:"愛爾蘭紅愛爾", en:"Irish Red Ale"},{no:49, zh:"英式金愛爾", en:"Golden Ale"},
+        // 3. 印度淡愛爾大家族 (IPA)
+        {no:56, zh:"印度式淡愛爾", en:"India Pale Ale"},{no:4, zh:"美式IPA", en:"American IPA"},{no:70, zh:"新英格蘭IPA", en:"NE IPA"},{no:23, zh:"香檳IPA", en:"Brut IPA"},{no:90, zh:"社交IPA", en:"Session IPA"},{no:19, zh:"黑色IPA", en:"Black IPA"},{no:85, zh:"紅色IPA", en:"Red IPA"},{no:98, zh:"白色IPA", en:"White IPA"},{no:34, zh:"雙倍IPA", en:"Double IPA"},{no:54, zh:"帝國IPA", en:"Imperial IPA"},{no:11, zh:"比利時IPA", en:"Belgian IPA"},
+        // 4. 德式愛爾與德式小麥家族
+        {no:2, zh:"老啤酒", en:"Altbier"},{no:61, zh:"科隆", en:"Kolsch"},{no:53, zh:"酵母小麥", en:"Hefeweizen"},{no:63, zh:"水晶小麥", en:"Kristallweizen"},{no:37, zh:"黑小麥", en:"Dunkelweizen"},{no:96, zh:"小麥勃克", en:"Weizenbock"},
+        // 5. 波特與斯陶特深色家族
+        {no:79, zh:"波特", en:"Porter"},{no:8, zh:"波羅地海波特", en:"Baltic Porter"},{no:59, zh:"愛爾蘭斯陶特", en:"Irish Stout"},{no:7, zh:"美式斯陶特", en:"American Stout"},{no:27, zh:"巧克力斯陶特", en:"Chocolate Stout"},{no:29, zh:"咖啡斯陶特", en:"Coffee Stout"},{no:68, zh:"牛奶斯陶特", en:"Milk Stout"},{no:72, zh:"燕麥斯陶特", en:"Oatmeal Stout"},{no:75, zh:"牡蠣斯陶特", en:"Oyster Stout"},{no:55, zh:"帝國斯陶特", en:"Imperial Stout"},
+        // 6. 比利時修道院與強愛爾家族
+        {no:93, zh:"修道院", en:"Trappist"},{no:1, zh:"艾比酒", en:"Abbey Ale"},{no:20, zh:"比利時黃金", en:"Blond"},{no:14, zh:"比利時強金愛爾", en:"Belgian Strong Gold"},{no:35, zh:"比利時雙倍", en:"Dubbel"},{no:94, zh:"比利時三倍", en:"Tripel"},{no:13, zh:"比利時強黑愛爾", en:"Belgian Strong Dark"},{no:82, zh:"比利時四倍", en:"Quadrupel"},
+        // 7. 其他愛爾風格
+        {no:22, zh:"棕愛爾", en:"Brown Ale"},{no:89, zh:"蘇格蘭愛爾", en:"Scotch Ale"},{no:67, zh:"輕愛爾", en:"Mild"},{no:86, zh:"裸麥愛爾", en:"Rye Ale"},{no:9, zh:"大麥酒", en:"Barley Wine"},
+        // 8. 皮爾森與歐陸淡色拉格家族
+        {no:78, zh:"皮爾森", en:"Pilsner"},{no:31, zh:"捷克皮爾森", en:"Czech Pilsner"},{no:47, zh:"德式皮爾森", en:"German Pilsner"},{no:6, zh:"美式皮爾森", en:"American Pilsner"},{no:69, zh:"慕尼黑淡拉格", en:"Munich Helles"},{no:33, zh:"多特蒙德出口型拉格", en:"Dortmunder Export"},
+        // 9. 深色、琥珀與節慶拉格家族
+        {no:36, zh:"黑拉格", en:"Dunkel"},{no:88, zh:"深黑拉格", en:"Schwarzbier"},{no:95, zh:"維也納", en:"Vienna"},{no:66, zh:"梅爾森", en:"Marzen"},{no:73, zh:"十月啤酒", en:"Oktoberfestbier"},
+        // 10. 勃克(加強型)拉格家族
+        {no:21, zh:"勃克", en:"Bock"},{no:65, zh:"五月勃克", en:"Maibock"},{no:32, zh:"雙倍勃克", en:"Doppelbock"},{no:38, zh:"冰勃克", en:"Eisbock"},
+        // 11. 工藝與特殊混血拉格
+        {no:25, zh:"加州一般型", en:"California Common"},{no:92, zh:"蒸氣啤酒", en:"Steam Beer"},{no:57, zh:"印度式淡拉格", en:"IPL"},{no:60, zh:"原漿啤酒", en:"Kellerbier"},
+        // 12. 德式與比利時野生自然發酵酸啤家族
+        {no:15, zh:"柏林小麥", en:"Berliner Weisse"},{no:50, zh:"鹽小麥", en:"Gose"},{no:64, zh:"蘭比克", en:"Lambic"},{no:41, zh:"黑糖蘭比克", en:"Faro"},{no:52, zh:"香檳啤酒", en:"Gueuze"},{no:45, zh:"水果蘭比克", en:"Fruit Lambic"},{no:62, zh:"比利時櫻桃啤酒", en:"Kriek"},{no:42, zh:"法蘭德斯紅愛爾", en:"Flanders Red Ale"},{no:43, zh:"法蘭德斯棕愛爾", en:"Flemish Oud Bruin"},
+        // 13. 比利時白啤、水果與調味混釀家族
+        {no:100, zh:"白啤酒", en:"Witbier"},{no:46, zh:"水果白啤酒", en:"Fruit Witbier"},{no:44, zh:"水果愛爾", en:"Fruit Ale"},{no:83, zh:"蘇打啤酒", en:"Radler"},
+        // 14. 蘋果與梨子西打酒家族
+        {no:28, zh:"西打酒", en:"Cider"},{no:77, zh:"梨子西打酒", en:"Perry"},
+        // 15. 歷史古法、過桶與特殊調味家族
+        {no:40, zh:"農舍愛爾", en:"Farmhouse Ale"},{no:87, zh:"季節啤酒", en:"Saison"},{no:51, zh:"古魯特", en:"Gruit"},{no:81, zh:"南瓜愛爾", en:"Pumpkin Ale"},{no:99, zh:"冬季啤酒", en:"Winter Warmer"},{no:30, zh:"奶油愛爾", en:"Cream Ale"},{no:84, zh:"煙燻啤酒", en:"Rauchbier"},{no:10, zh:"桶陳", en:"Barrel Aged"},{no:17, zh:"蒸餾啤酒", en:"Bierbrand"},
+        // 16. 當代酸啤與特殊健康宣稱
+        {no:91, zh:"酸愛爾", en:"Sour Ale"},{no:48, zh:"無麩質啤酒", en:"Gluten Free"},{no:71, zh:"無酒精啤酒", en:"Non-alcohol"}
+    ];
+
+    let currentSortMode = 'alpha'; 
     let favorites = JSON.parse(localStorage.getItem('beer_favs')) || [];
     let showFavOnly = false;
     let displayList = []; let playOrder = []; let playPointer = 0;
     let isPlaying = false; let synth = window.speechSynthesis; let delayTimeout = null;
 
-    // 核心數據準備：只處理資料過濾，不主動打亂順序
     function prepareData() {
-        let raw = currentGroupNum === 1 ? group1 : group2;
+        let raw = currentSortMode === 'alpha' ? alphaList : categoryList;
         displayList = showFavOnly ? raw.filter(item => favorites.includes(item.no)) : [...raw];
     }
 
-    // 核心順序重置：只有在手動勾選隨機、切換組別或重置時才呼叫此處
     function rebuildPlayOrder() {
         playOrder = displayList.map((_, i) => i);
         if (document.getElementById('shuffleCheck').checked) {
@@ -145,7 +178,6 @@
         }
     }
 
-    // 渲染清單：純粹更新畫面，絕對不破壞已經建立好的 playOrder
     function renderList(shouldRebuildOrder = false) {
         prepareData();
         if (shouldRebuildOrder || playOrder.length !== displayList.length) {
@@ -195,11 +227,9 @@
 
     function toggleFav(e, no) { e.stopPropagation(); favorites = favorites.includes(no) ? favorites.filter(n=>n!==no) : [...favorites, no]; localStorage.setItem('beer_favs', JSON.stringify(favorites)); renderList(false); }
     
-    // 切換組別或收藏過濾時，必須完整重設播放順序
-    function switchGroup(num) { currentGroupNum = num; document.getElementById('tab1').classList.toggle('active',num===1); document.getElementById('tab2').classList.toggle('active',num===2); stopPlayback(); renderList(true); }
+    function switchSortMode(mode) { currentSortMode = mode; document.getElementById('tab1').classList.toggle('active',mode==='alpha'); document.getElementById('tab2').classList.toggle('active',mode==='category'); stopPlayback(); renderList(true); }
     function toggleFavFilter() { showFavOnly = !showFavOnly; document.getElementById('favFilterBtn').classList.toggle('active',showFavOnly); stopPlayback(); renderList(true); }
     
-    // 使用者手動切換隨機開關時，直接在當前基礎上重新排定順序
     function handleShuffleToggle() { 
         rebuildPlayOrder(); 
         if (isPlaying) {
