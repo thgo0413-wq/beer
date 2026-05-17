@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-color=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>精釀啤酒專業考核系統</title>
     <style>
         :root {
@@ -44,7 +44,6 @@
         .beer-item { display: grid; grid-template-columns: 40px 40px 1.2fr 1fr; padding: 14px 10px; border-bottom: 1px solid var(--border-color); align-items: center; font-size: 14px; cursor: pointer; }
         .beer-item:last-child { border-bottom: none; }
         
-        /* 增加可點擊區域的手勢提示 */
         .beer-item .star-btn { color: #444; font-size: 18px; text-align: center; cursor: pointer; }
         .beer-item .star-btn.favored { color: var(--accent-color); }
         .beer-item .no { color: var(--accent-color); font-weight: bold; text-align: center; cursor: pointer; }
@@ -132,17 +131,27 @@
     let displayList = []; let playOrder = []; let playPointer = 0;
     let isPlaying = false; let synth = window.speechSynthesis; let delayTimeout = null;
 
+    // 核心數據準備：只處理資料過濾，不主動打亂順序
     function prepareData() {
         let raw = currentGroupNum === 1 ? group1 : group2;
         displayList = showFavOnly ? raw.filter(item => favorites.includes(item.no)) : [...raw];
+    }
+
+    // 核心順序重置：只有在手動勾選隨機、切換組別或重置時才呼叫此處
+    function rebuildPlayOrder() {
         playOrder = displayList.map((_, i) => i);
         if (document.getElementById('shuffleCheck').checked) {
             playOrder.sort(() => Math.random() - 0.5);
         }
     }
 
-    function renderList() {
+    // 渲染清單：純粹更新畫面，絕對不破壞已經建立好的 playOrder
+    function renderList(shouldRebuildOrder = false) {
         prepareData();
+        if (shouldRebuildOrder || playOrder.length !== displayList.length) {
+            rebuildPlayOrder();
+        }
+        
         const container = document.getElementById('listContainer');
         container.innerHTML = '';
         if(displayList.length === 0) { container.innerHTML = '<div style="padding:20px;text-align:center;color:#888;">暫無收藏項目</div>'; return; }
@@ -159,7 +168,6 @@
                 <div class="en" id="en-${idx}" onclick="handleLabelClick(event, ${idx})">${beer.en}</div>
             `;
             
-            // 點擊整列背景時，排除星號和文字區塊，觸發播放
             item.addEventListener('click', (e) => {
                 if (e.target.classList.contains('star-btn') || e.target.classList.contains('zh') || e.target.classList.contains('en') || e.target.classList.contains('no')) return;
                 handleItemTrigger(idx);
@@ -170,7 +178,6 @@
         handleQuizToggle();
     }
 
-    // 處理手動點擊品名：如果是盲聽模式，單純切換顯示/隱藏答案，絕不干擾或重播語音
     function handleLabelClick(e, idx) {
         e.stopPropagation();
         if (document.getElementById('quizCheck').checked) {
@@ -181,16 +188,29 @@
         }
     }
 
-    // 處理點選編號或列觸發語音播放
     function handleItemTrigger(idx) {
         playPointer = playOrder.indexOf(idx);
         startPlayback();
     }
 
-    function toggleFav(e, no) { e.stopPropagation(); favorites = favorites.includes(no) ? favorites.filter(n=>n!==no) : [...favorites, no]; localStorage.setItem('beer_favs', JSON.stringify(favorites)); renderList(); }
-    function switchGroup(num) { currentGroupNum = num; document.getElementById('tab1').classList.toggle('active',num===1); document.getElementById('tab2').classList.toggle('active',num===2); stopPlayback(); renderList(); }
-    function toggleFavFilter() { showFavOnly = !showFavOnly; document.getElementById('favFilterBtn').classList.toggle('active',showFavOnly); stopPlayback(); renderList(); }
-    function handleShuffleToggle() { if(!isPlaying) { prepareData(); } }
+    function toggleFav(e, no) { e.stopPropagation(); favorites = favorites.includes(no) ? favorites.filter(n=>n!==no) : [...favorites, no]; localStorage.setItem('beer_favs', JSON.stringify(favorites)); renderList(false); }
+    
+    // 切換組別或收藏過濾時，必須完整重設播放順序
+    function switchGroup(num) { currentGroupNum = num; document.getElementById('tab1').classList.toggle('active',num===1); document.getElementById('tab2').classList.toggle('active',num===2); stopPlayback(); renderList(true); }
+    function toggleFavFilter() { showFavOnly = !showFavOnly; document.getElementById('favFilterBtn').classList.toggle('active',showFavOnly); stopPlayback(); renderList(true); }
+    
+    // 使用者手動切換隨機開關時，直接在當前基礎上重新排定順序
+    function handleShuffleToggle() { 
+        rebuildPlayOrder(); 
+        if (isPlaying) {
+            const activePlayingItemIdx = document.querySelector('.beer-item.playing') ? parseInt(document.querySelector('.beer-item.playing').id.replace('beer-', '')) : 0;
+            playPointer = playOrder.indexOf(activePlayingItemIdx);
+            if (playPointer === -1) playPointer = 0;
+        } else {
+            playPointer = 0;
+        }
+    }
+    
     function handleQuizToggle() { 
         document.getElementById('listContainer').classList.toggle('quiz-mode', document.getElementById('quizCheck').checked); 
         if(!document.getElementById('quizCheck').checked) {
@@ -235,7 +255,6 @@
         const container = document.getElementById('listContainer');
         const activeRow = document.getElementById(`beer-${idx}`);
         
-        // 【5次校對核心】完美計算內部滾動，確保當前行老老實實出現在清單的正中央，絕不拉扯外層網頁
         if(activeRow) {
             activeRow.classList.add('playing');
             const targetTop = activeRow.offsetTop - (container.clientHeight / 2) + (activeRow.clientHeight / 2);
@@ -247,8 +266,6 @@
         const nextSongDelay = parseFloat(document.getElementById('delaySlider').value) * 1000;
 
         if (isQuizMode) {
-            // 🎯 盲聽模式精簡邏輯：
-            // 英文1 -> 英文2 -> 絕不發出中文答案語音 -> 直接安靜等待 Delay -> 自動跳下一首
             let eq1 = new SpeechSynthesisUtterance(beer.en); eq1.lang = 'en-US'; eq1.rate = currentSpeed;
             let eq2 = new SpeechSynthesisUtterance(beer.en); eq2.lang = 'en-US'; eq2.rate = currentSpeed;
             
@@ -261,8 +278,6 @@
             };
             synth.speak(eq1);
         } else {
-            // 👥 一般標準模式：
-            // 中文1 -> 英文1 -> 英文2 -> 等待 Delay -> 自動下一首
             let uZh = new SpeechSynthesisUtterance(beer.zh); uZh.lang = 'zh-TW'; uZh.rate = currentSpeed;
             let uEn1 = new SpeechSynthesisUtterance(beer.en); uEn1.lang = 'en-US'; uEn1.rate = currentSpeed;
             let uEn2 = new SpeechSynthesisUtterance(beer.en); uEn2.lang = 'en-US'; uEn2.rate = currentSpeed;
@@ -277,7 +292,7 @@
     document.getElementById('playBtn').addEventListener('click', startPlayback);
     document.getElementById('pauseBtn').addEventListener('click', pausePlayback);
     document.getElementById('stopBtn').addEventListener('click', stopPlayback);
-    window.addEventListener('DOMContentLoaded', renderList);
+    window.addEventListener('DOMContentLoaded', () => renderList(true));
 </script>
 </body>
 </html>
