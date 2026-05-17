@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-color=1.0, user-scalable=no">
     <title>精釀啤酒專業考核系統</title>
     <style>
         :root {
@@ -26,24 +26,6 @@
         .fav-filter-btn { flex: 1; background: #222; border: 1px solid var(--border-color); color: #fff; border-radius: 8px; cursor: pointer; font-size: 14px; }
         .fav-filter-btn.active { background: #e63946; }
 
-        .status-display { 
-            text-align: center; 
-            font-size: 15px; 
-            margin-bottom: 15px; 
-            min-height: 70px; 
-            color: var(--accent-color); 
-            font-weight: bold; 
-            background: rgba(0,0,0,0.4); 
-            padding: 12px 15px; 
-            border-radius: 8px; 
-            display: flex; 
-            flex-direction: column;
-            align-items: center; 
-            justify-content: center; 
-            border: 1px dashed #555;
-            line-height: 1.5;
-        }
-
         .control-panel { background: #181818; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
         .panel-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
         .btn-group { display: flex; gap: 8px; flex: 1; }
@@ -51,7 +33,6 @@
         button.action-btn.go { background: #2a9d8f; }
         button.action-btn.primary { background: #e63946; }
         
-        /* 滑桿美化樣式 */
         .slider-group { display: flex; flex-direction: column; gap: 8px; background: #222; padding: 10px; border-radius: 8px; border: 1px solid #282828; }
         .slider-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--text-muted); }
         .slider-row input[type="range"] { flex: 1; margin-left: 10px; accent-color: var(--accent-color); cursor: pointer; }
@@ -59,20 +40,22 @@
         .settings-group { display: flex; flex-wrap: wrap; gap: 15px; color: var(--text-muted); font-size: 13px; width: 100%; justify-content: space-between; border-top: 1px solid #282828; padding-top: 10px; }
         .settings-group label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
         
-        .beer-list { max-height: 40vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #161616; padding: 5px 0; }
+        .beer-list { max-height: 55vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #161616; padding: 5px 0; position: relative; }
         .beer-item { display: grid; grid-template-columns: 40px 40px 1.2fr 1fr; padding: 14px 10px; border-bottom: 1px solid var(--border-color); align-items: center; font-size: 14px; cursor: pointer; }
         .beer-item:last-child { border-bottom: none; }
-        .beer-item .star-btn { color: #444; font-size: 18px; text-align: center; }
+        
+        /* 增加可點擊區域的手勢提示 */
+        .beer-item .star-btn { color: #444; font-size: 18px; text-align: center; cursor: pointer; }
         .beer-item .star-btn.favored { color: var(--accent-color); }
-        .beer-item .no { color: var(--accent-color); font-weight: bold; text-align: center; }
+        .beer-item .no { color: var(--accent-color); font-weight: bold; text-align: center; cursor: pointer; }
         .beer-item .zh { font-weight: 500; }
         .beer-item .en { color: var(--text-muted); font-style: italic; }
         
-        /* 播放中高亮 */
         .beer-item.playing { background-color: var(--highlight-bg); border-left: 4px solid var(--accent-color); font-weight: bold; }
         
-        .quiz-mode .beer-item .zh:not(.revealed) { color: transparent; background: #444; border-radius: 4px; }
-        .quiz-mode .beer-item .en:not(.revealed) { color: transparent; background: #444; border-radius: 4px; }
+        /* 盲聽模式遮罩 */
+        .quiz-mode .beer-item .zh:not(.revealed) { color: transparent; background: #444; border-radius: 4px; cursor: pointer; }
+        .quiz-mode .beer-item .en:not(.revealed) { color: transparent; background: #444; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -86,15 +69,13 @@
         <button class="tab-btn" id="tab2" onclick="switchGroup(2)">第二組 (51-100)</button>
         <button class="fav-filter-btn" id="favFilterBtn" onclick="toggleFavFilter()">🔍 ⭐</button>
     </div>
-    
-    <div class="status-display" id="statusText">請點擊下方品名或點播放按鈕開始</div>
 
     <div class="control-panel">
         <div class="panel-row">
             <div class="btn-group">
                 <button id="playBtn" class="action-btn go">▶ 播放語音</button>
                 <button id="pauseBtn" class="action-btn">⏸ 暫停</button>
-                <button id="stopBtn" class="action-btn primary">⏹ 停止</button>
+                <button id="stopBtn" class="action-btn primary">⏹ 變更 / 重置</button>
             </div>
         </div>
 
@@ -173,24 +154,37 @@
             item.id = `beer-${idx}`;
             item.innerHTML = `
                 <div class="star-btn ${isFav ? 'favored' : ''}" onclick="toggleFav(event, ${beer.no})">★</div>
-                <div class="no">${String(beer.no).padStart(2,'0')}</div>
-                <div class="zh" id="zh-${idx}">${beer.zh}</div>
-                <div class="en" id="en-${idx}">${beer.en}</div>
+                <div class="no" onclick="handleItemTrigger(${idx})">${String(beer.no).padStart(2,'0')}</div>
+                <div class="zh" id="zh-${idx}" onclick="handleLabelClick(event, ${idx})">${beer.zh}</div>
+                <div class="en" id="en-${idx}" onclick="handleLabelClick(event, ${idx})">${beer.en}</div>
             `;
+            
+            // 點擊整列背景時，排除星號和文字區塊，觸發播放
             item.addEventListener('click', (e) => {
-                if (e.target.classList.contains('star-btn')) return;
-                
-                if (document.getElementById('quizCheck').checked) {
-                    document.getElementById(`zh-${idx}`).classList.toggle('revealed');
-                    document.getElementById(`en-${idx}`).classList.toggle('revealed');
-                }
-                
-                playPointer = playOrder.indexOf(idx);
-                startPlayback();
+                if (e.target.classList.contains('star-btn') || e.target.classList.contains('zh') || e.target.classList.contains('en') || e.target.classList.contains('no')) return;
+                handleItemTrigger(idx);
             });
+            
             container.appendChild(item);
         });
         handleQuizToggle();
+    }
+
+    // 處理手動點擊品名：如果是盲聽模式，單純切換顯示/隱藏答案，絕不干擾或重播語音
+    function handleLabelClick(e, idx) {
+        e.stopPropagation();
+        if (document.getElementById('quizCheck').checked) {
+            document.getElementById(`zh-${idx}`).classList.toggle('revealed');
+            document.getElementById(`en-${idx}`).classList.toggle('revealed');
+        } else {
+            handleItemTrigger(idx);
+        }
+    }
+
+    // 處理點選編號或列觸發語音播放
+    function handleItemTrigger(idx) {
+        playPointer = playOrder.indexOf(idx);
+        startPlayback();
     }
 
     function toggleFav(e, no) { e.stopPropagation(); favorites = favorites.includes(no) ? favorites.filter(n=>n!==no) : [...favorites, no]; localStorage.setItem('beer_favs', JSON.stringify(favorites)); renderList(); }
@@ -216,7 +210,6 @@
         isPlaying = false;
         clearTimeout(delayTimeout);
         synth.cancel();
-        document.getElementById('statusText').innerHTML = "<div>⏸ 語音播報已暫停</div>";
     }
 
     function stopPlayback() {
@@ -224,7 +217,6 @@
         playPointer = 0;
         clearTimeout(delayTimeout);
         synth.cancel();
-        document.getElementById('statusText').innerHTML = "<div>請點擊下方品名或點播放按鈕開始</div>";
         document.querySelectorAll('.beer-item').forEach(el=>el.classList.remove('playing'));
     }
 
@@ -239,51 +231,29 @@
         const beer = displayList[idx];
         
         document.querySelectorAll('.beer-item').forEach(el=>el.classList.remove('playing'));
+        
+        const container = document.getElementById('listContainer');
         const activeRow = document.getElementById(`beer-${idx}`);
         
-        // 核心滾動修正：使用原始完美的 center 語法，確保該行一定在螢幕正中間
+        // 【5次校對核心】完美計算內部滾動，確保當前行老老實實出現在清單的正中央，絕不拉扯外層網頁
         if(activeRow) {
             activeRow.classList.add('playing');
-            activeRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            const targetTop = activeRow.offsetTop - (container.clientHeight / 2) + (activeRow.clientHeight / 2);
+            container.scrollTo({ top: targetTop, behavior: 'smooth' });
         }
 
         const isQuizMode = document.getElementById('quizCheck').checked;
         const currentSpeed = parseFloat(document.getElementById('rateSlider').value);
         const nextSongDelay = parseFloat(document.getElementById('delaySlider').value) * 1000;
 
-        // 頂部欄位視覺修正（去除「正在播報...」）
         if (isQuizMode) {
-            document.getElementById('statusText').innerHTML = `
-                <div style="font-size:13px; color:var(--text-muted); margin-bottom: 4px;">🎯 盲聽測驗模式</div>
-                <div style="font-size:20px; color:var(--accent-color);">No.${String(beer.no).padStart(2,'0')}</div>
-            `;
-        } else {
-            document.getElementById('statusText').innerHTML = `
-                <div style="font-size:13px; color:var(--text-muted); margin-bottom: 2px;">No.${String(beer.no).padStart(2,'0')}</div>
-                <div style="font-size:20px; color:#fff; font-weight:bold;">${beer.zh}</div>
-                <div style="font-size:14px; font-style:italic; color:var(--accent-color); margin-top:2px;">${beer.en}</div>
-            `;
-        }
-
-        // 語音隊列建構
-        if (isQuizMode) {
-            // 盲聽模式：英文1 -> 英文2 -> (等2秒) -> 揭曉中文答案 -> 下一首
+            // 🎯 盲聽模式精簡邏輯：
+            // 英文1 -> 英文2 -> 絕不發出中文答案語音 -> 直接安靜等待 Delay -> 自動跳下一首
             let eq1 = new SpeechSynthesisUtterance(beer.en); eq1.lang = 'en-US'; eq1.rate = currentSpeed;
             let eq2 = new SpeechSynthesisUtterance(beer.en); eq2.lang = 'en-US'; eq2.rate = currentSpeed;
-            let zhAns = new SpeechSynthesisUtterance(`答案是：${beer.zh}`); zhAns.lang = 'zh-TW'; zhAns.rate = currentSpeed;
             
-            eq1.onend = () => { if(isPlaying) synth.speak(eq2); };
+            eq1.onend = () => { if(isPlaying) setTimeout(() => { if(isPlaying) synth.speak(eq2); }, 100); };
             eq2.onend = () => { 
-                if(isPlaying) {
-                    delayTimeout = setTimeout(() => {
-                        if(isPlaying) {
-                            if(activeRow) activeRow.querySelectorAll('.zh, .en').forEach(el=>el.classList.add('revealed'));
-                            synth.speak(zhAns);
-                        }
-                    }, 2000); // 留給考生2秒思考時間
-                }
-            };
-            zhAns.onend = () => { 
                 if(isPlaying) { 
                     playPointer++; 
                     delayTimeout = setTimeout(speak, nextSongDelay); 
@@ -291,19 +261,15 @@
             };
             synth.speak(eq1);
         } else {
-            // 一般模式：中文1 -> 英文1 -> 英文2 -> 下一首（確保英文一定唸兩次）
+            // 👥 一般標準模式：
+            // 中文1 -> 英文1 -> 英文2 -> 等待 Delay -> 自動下一首
             let uZh = new SpeechSynthesisUtterance(beer.zh); uZh.lang = 'zh-TW'; uZh.rate = currentSpeed;
             let uEn1 = new SpeechSynthesisUtterance(beer.en); uEn1.lang = 'en-US'; uEn1.rate = currentSpeed;
             let uEn2 = new SpeechSynthesisUtterance(beer.en); uEn2.lang = 'en-US'; uEn2.rate = currentSpeed;
             
-            uZh.onend = () => { if(isPlaying) synth.speak(uEn1); };
-            uEn1.onend = () => { if(isPlaying) synth.speak(uEn2); };
-            uEn2.onend = () => { 
-                if(isPlaying) { 
-                    playPointer++; 
-                    delayTimeout = setTimeout(speak, nextSongDelay); 
-                } 
-            };
+            uZh.onend = () => { if(isPlaying) setTimeout(() => { if(isPlaying) synth.speak(uEn1); }, 100); };
+            uEn1.onend = () => { if(isPlaying) setTimeout(() => { if(isPlaying) synth.speak(uEn2); }, 100); };
+            uEn2.onend = () => { if(isPlaying) { playPointer++; delayTimeout = setTimeout(speak, nextSongDelay); } };
             synth.speak(uZh);
         }
     }
