@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>精釀啤酒考核語音系統 v3.3 (修復穩定版)</title>
+    <title>精釀啤酒專業考核系統</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -17,8 +17,8 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, system-ui, sans-serif; -webkit-user-select: none; }
         body { background-color: var(--bg-color); color: var(--text-color); padding: 20px 15px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .container { width: 100%; max-width: 600px; background: var(--card-bg); border-radius: 16px; padding: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
-        header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-        header h1 { font-size: 22px; color: var(--accent-color); }
+        header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+        header h1 { font-size: 22px; color: var(--accent-color); font-weight: 700; letter-spacing: 1px; }
         
         .filter-panel { display: flex; gap: 8px; margin-bottom: 15px; }
         .tab-btn { flex: 2; background: #333; border: none; color: white; padding: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 14px; }
@@ -48,13 +48,29 @@
         .quiz-mode .beer-item .zh:not(.revealed) { color: transparent; background: #444; border-radius: 4px; }
         .quiz-mode .beer-item .en:not(.revealed) { color: transparent; background: #444; border-radius: 4px; }
 
-        .status-display { text-align: center; font-size: 14px; margin-bottom: 10px; min-height: 40px; color: var(--accent-color); font-weight: bold; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 1px dashed #444; }
+        /* 完美置中與美化播報顯示欄位 */
+        .status-display { 
+            text-align: center; 
+            font-size: 15px; 
+            margin-bottom: 12px; 
+            min-height: 44px; 
+            color: var(--accent-color); 
+            font-weight: bold; 
+            background: rgba(0,0,0,0.4); 
+            padding: 8px 15px; 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border: 1px dashed #555;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <header>
-        <h1>🍻 精釀啤酒考核語音系統 v3.3</h1>
+        <h1>🍻 精釀啤酒專業考核系統</h1>
     </header>
     
     <div class="filter-panel">
@@ -104,7 +120,7 @@
         {no:71, zh:"無酒精啤酒", en:"Non-alcohol"},{no:72, zh:"燕麥斯陶特", en:"Oatmeal Stout"},{no:73, zh:"十月啤酒", en:"Oktoberfestbier"},{no:74, zh:"老愛爾", en:"Old Ale"},{no:75, zh:"牡蠣斯陶特", en:"Oyster Stout"},
         {no:76, zh:"南太平洋淡愛爾", en:"Pacific Pale Ale"},{no:77, zh:"梨子西打酒", en:"Perry"},{no:78, zh:"皮爾森", en:"Pilsner"},{no:79, zh:"波特", en:"Porter"},{no:80, zh:"頂級苦啤酒", en:"Premium Bitter"},
         {no:81, zh:"南瓜愛爾", en:"Pumpkin Ale"},{no:82, zh:"比利時四倍", en:"Quadrupel"},{no:83, zh:"蘇打啤酒", en:"Radler"},{no:84, zh:"煙燻啤酒", en:"Rauchbier"},{no:85, zh:"紅色IPA", en:"Red IPA"},
-        {no:86, zh:"裸麥愛爾", en:"Rye Ale"},{no:87, zh:"季節啤酒", en:"Saison"},{no:88, zh:"深黑拉格", pre:"Schwarzbier", zh:"深黑拉格", en:"Schwarzbier"},{no:89, zh:"蘇格蘭愛爾", en:"Scotch Ale"},{no:90, zh:"社交IPA", en:"Session IPA"},
+        {no:86, zh:"裸麥愛爾", en:"Rye Ale"},{no:87, zh:"季節啤酒", en:"Saison"},{no:88, zh:"深黑拉格", en:"Schwarzbier"},{no:89, zh:"蘇格蘭愛爾", en:"Scotch Ale"},{no:90, zh:"社交IPA", en:"Session IPA"},
         {no:91, zh:"酸愛爾", en:"Sour Ale"},{no:92, zh:"蒸氣啤酒", en:"Steam Beer"},{no:93, zh:"修道院", en:"Trappist"},{no:94, zh:"比利時雙倍", en:"Tripel"},{no:95, zh:"維也納", en:"Vienna"},
         {no:96, zh:"小麥勃克", en:"Weizenbock"},{no:97, zh:"小麥愛爾", en:"Wheat Ale"},{no:98, zh:"白色IPA", en:"White IPA"},{no:99, zh:"冬季啤酒", en:"Winter Warmer"},{no:100, zh:"白啤酒", en:"Witbier"}
     ];
@@ -144,7 +160,6 @@
             item.addEventListener('click', (e) => {
                 if (e.target.classList.contains('star-btn')) return;
                 
-                // 盲聽模式點擊可以單獨揭曉答案
                 if (document.getElementById('quizCheck').checked) {
                     document.getElementById(`zh-${idx}`).classList.toggle('revealed');
                     document.getElementById(`en-${idx}`).classList.toggle('revealed');
@@ -210,18 +225,18 @@
         }
 
         const isQuizMode = document.getElementById('quizCheck').checked;
-        document.getElementById('statusText').innerText = isQuizMode ? `🎯 盲聽測驗模式：正在播報 No.${beer.no}` : `正在播報: No.${beer.no} ${beer.zh}`;
+        document.getElementById('statusText').innerText = isQuizMode ? `🎯 盲聽測驗模式：正在播報 No.${beer.no}` : `正在播報: No.${beer.no}\n${beer.zh} (${beer.en})`;
 
+        // 徹底解決 iOS 語音互相掐斷的寫法：將兩段語音分開、給予充足緩衝
         let u1, u2;
         if (isQuizMode) {
-            // 盲聽模式：先唸英文，停頓兩秒讓考生猜，再唸中文公佈答案
             u1 = new SpeechSynthesisUtterance(beer.en); u1.lang = 'en-US'; u1.rate = 0.85;
             u2 = new SpeechSynthesisUtterance(`答案是：${beer.zh}`); u2.lang = 'zh-TW'; u2.rate = 0.9;
             
             u1.onend = () => { 
                 if(isPlaying) {
                     delayTimeout = setTimeout(() => {
-                        if(activeRow) activeRow.querySelectorAll('.zh, .en').forEach(el=>el.add('revealed'));
+                        if(activeRow) activeRow.querySelectorAll('.zh, .en').forEach(el=>el.classList.add('revealed'));
                         synth.speak(u2);
                     }, 2000); 
                 } 
@@ -229,16 +244,23 @@
             u2.onend = () => { if(isPlaying) { playPointer++; delayTimeout = setTimeout(speak, 1500); } };
             synth.speak(u1);
         } else {
-            // 標準模式：先中文，後英文
             u1 = new SpeechSynthesisUtterance(beer.zh); u1.lang = 'zh-TW'; u1.rate = 0.9;
             u2 = new SpeechSynthesisUtterance(beer.en); u2.lang = 'en-US'; u2.rate = 0.85;
             
-            u1.onend = () => { if(isPlaying) synth.speak(u2); };
+            u1.onend = () => { 
+                if(isPlaying) {
+                    // 給 iOS 0.3 秒稍微喘息，再啟動英文，確保英文不被割斷
+                    delayTimeout = setTimeout(() => {
+                        if(isPlaying) synth.speak(u2);
+                    }, 3000);
+                } 
+            };
             u2.onend = () => { if(isPlaying) { playPointer++; delayTimeout = setTimeout(speak, 1500); } };
             synth.speak(u1);
         }
     }
 
+    document.getElementById('playBtn').addEventListener('click', startPlayback);
     document.getElementById('playBtn').addEventListener('click', startPlayback);
     document.getElementById('pauseBtn').addEventListener('click', pausePlayback);
     document.getElementById('stopBtn').addEventListener('click', stopPlayback);
