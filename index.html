@@ -26,38 +26,15 @@
         .fav-filter-btn { flex: 1; background: #222; border: 1px solid var(--border-color); color: #fff; border-radius: 8px; cursor: pointer; font-size: 14px; }
         .fav-filter-btn.active { background: #e63946; }
 
-        .control-panel { background: #181818; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
-        .panel-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-        .btn-group { display: flex; gap: 8px; flex: 1; }
-        button.action-btn { flex: 1; background: #444; color: white; border: none; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
-        button.action-btn.go { background: #2a9d8f; }
-        button.action-btn.primary { background: #e63946; }
-        
-        .settings-group { display: flex; flex-wrap: wrap; gap: 15px; color: var(--text-muted); font-size: 13px; width: 100%; justify-content: space-between; border-top: 1px solid #282828; padding-top: 10px; }
-        .settings-group label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-        
-        .beer-list { max-height: 45vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #161616; }
-        .beer-item { display: grid; grid-template-columns: 40px 40px 1.2fr 1fr; padding: 14px 10px; border-bottom: 1px solid var(--border-color); align-items: center; font-size: 14px; cursor: pointer; }
-        .beer-item .star-btn { color: #444; font-size: 18px; text-align: center; }
-        .beer-item .star-btn.favored { color: var(--accent-color); }
-        .beer-item .no { color: var(--accent-color); font-weight: bold; text-align: center; }
-        .beer-item .zh { font-weight: 500; }
-        .beer-item .en { color: var(--text-muted); font-style: italic; }
-        .beer-item.playing { background-color: var(--highlight-bg); border-left: 4px solid var(--accent-color); }
-        
-        .quiz-mode .beer-item .zh:not(.revealed) { color: transparent; background: #444; border-radius: 4px; }
-        .quiz-mode .beer-item .en:not(.revealed) { color: transparent; background: #444; border-radius: 4px; }
-
-        /* 確保當前播放品名完美水平、垂直置中，且換行依然美觀 */
         .status-display { 
             text-align: center; 
             font-size: 15px; 
-            margin-bottom: 12px; 
-            min-height: 50px; 
+            margin-bottom: 15px; 
+            min-height: 70px; 
             color: var(--accent-color); 
             font-weight: bold; 
             background: rgba(0,0,0,0.4); 
-            padding: 10px 15px; 
+            padding: 12px 15px; 
             border-radius: 8px; 
             display: flex; 
             flex-direction: column;
@@ -66,6 +43,36 @@
             border: 1px dashed #555;
             line-height: 1.5;
         }
+
+        .control-panel { background: #181818; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 12px; }
+        .panel-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .btn-group { display: flex; gap: 8px; flex: 1; }
+        button.action-btn { flex: 1; background: #444; color: white; border: none; padding: 12px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+        button.action-btn.go { background: #2a9d8f; }
+        button.action-btn.primary { background: #e63946; }
+        
+        /* 滑桿美化樣式 */
+        .slider-group { display: flex; flex-direction: column; gap: 8px; background: #222; padding: 10px; border-radius: 8px; border: 1px solid #282828; }
+        .slider-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--text-muted); }
+        .slider-row input[type="range"] { flex: 1; margin-left: 10px; accent-color: var(--accent-color); cursor: pointer; }
+
+        .settings-group { display: flex; flex-wrap: wrap; gap: 15px; color: var(--text-muted); font-size: 13px; width: 100%; justify-content: space-between; border-top: 1px solid #282828; padding-top: 10px; }
+        .settings-group label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        
+        .beer-list { max-height: 40vh; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; background: #161616; padding: 5px 0; }
+        .beer-item { display: grid; grid-template-columns: 40px 40px 1.2fr 1fr; padding: 14px 10px; border-bottom: 1px solid var(--border-color); align-items: center; font-size: 14px; cursor: pointer; }
+        .beer-item:last-child { border-bottom: none; }
+        .beer-item .star-btn { color: #444; font-size: 18px; text-align: center; }
+        .beer-item .star-btn.favored { color: var(--accent-color); }
+        .beer-item .no { color: var(--accent-color); font-weight: bold; text-align: center; }
+        .beer-item .zh { font-weight: 500; }
+        .beer-item .en { color: var(--text-muted); font-style: italic; }
+        
+        /* 播放中高亮 */
+        .beer-item.playing { background-color: var(--highlight-bg); border-left: 4px solid var(--accent-color); font-weight: bold; }
+        
+        .quiz-mode .beer-item .zh:not(.revealed) { color: transparent; background: #444; border-radius: 4px; }
+        .quiz-mode .beer-item .en:not(.revealed) { color: transparent; background: #444; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -90,6 +97,18 @@
                 <button id="stopBtn" class="action-btn primary">⏹ 停止</button>
             </div>
         </div>
+
+        <div class="slider-group">
+            <div class="slider-row">
+                <span>🗣️ 語速控制: <span id="rateVal">0.9</span>x</span>
+                <input type="range" id="rateSlider" min="0.5" max="1.5" step="0.05" value="0.9" oninput="document.getElementById('rateVal').innerText=this.value">
+            </div>
+            <div class="slider-row">
+                <span>⏱️ 每首間隔: <span id="delayVal">1.5</span> 秒</span>
+                <input type="range" id="delaySlider" min="0.5" max="4.0" step="0.5" value="1.5" oninput="document.getElementById('delayVal').innerText=this.value">
+            </div>
+        </div>
+
         <div class="settings-group">
             <label><input type="checkbox" id="loopCheck" checked> 🔁 循環播放</label>
             <label><input type="checkbox" id="shuffleCheck" onchange="handleShuffleToggle()"> 🔀 隨機亂序</label>
@@ -221,72 +240,74 @@
         
         document.querySelectorAll('.beer-item').forEach(el=>el.classList.remove('playing'));
         const activeRow = document.getElementById(`beer-${idx}`);
+        
+        // 核心滾動修正：使用原始完美的 center 語法，確保該行一定在螢幕正中間
         if(activeRow) {
             activeRow.classList.add('playing');
-            document.getElementById('listContainer').scrollTo({top: activeRow.offsetTop - 80, behavior:'smooth'});
+            activeRow.scrollIntoView({ block: 'center', behavior: 'smooth' });
         }
 
         const isQuizMode = document.getElementById('quizCheck').checked;
-        
-        // 核心修正：將品名狀態欄完美置中，分行呈現，提升大螢幕與手機端的 scannability
+        const currentSpeed = parseFloat(document.getElementById('rateSlider').value);
+        const nextSongDelay = parseFloat(document.getElementById('delaySlider').value) * 1000;
+
+        // 頂部欄位視覺修正（去除「正在播報...」）
         if (isQuizMode) {
             document.getElementById('statusText').innerHTML = `
-                <div style="font-size:13px; color:var(--text-muted);">🎯 盲聽測驗模式</div>
-                <div style="font-size:18px; margin-top:2px;">播報中：No.${String(beer.no).padStart(2,'0')}</div>
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom: 4px;">🎯 盲聽測驗模式</div>
+                <div style="font-size:20px; color:var(--accent-color);">No.${String(beer.no).padStart(2,'0')}</div>
             `;
         } else {
             document.getElementById('statusText').innerHTML = `
-                <div style="font-size:13px; color:var(--text-muted);">正在播報 No.${String(beer.no).padStart(2,'0')}</div>
-                <div style="font-size:18px; margin-top:2px; color:#fff;">${beer.zh}</div>
-                <div style="font-size:14px; font-style:italic; color:var(--accent-color);">${beer.en}</div>
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom: 2px;">No.${String(beer.no).padStart(2,'0')}</div>
+                <div style="font-size:20px; color:#fff; font-weight:bold;">${beer.zh}</div>
+                <div style="font-size:14px; font-style:italic; color:var(--accent-color); margin-top:2px;">${beer.en}</div>
             `;
         }
 
-        // 核心語音隊列修正：使用 iOS 最穩定的原生隊列，拒絕用計時器強行插隊
-        let u1, u2;
+        // 語音隊列建構
         if (isQuizMode) {
-            u1 = new SpeechSynthesisUtterance(beer.en); u1.lang = 'en-US'; u1.rate = 0.85;
-            u2 = new SpeechSynthesisUtterance(`答案是：${beer.zh}`); u2.lang = 'zh-TW'; u2.rate = 0.9;
+            // 盲聽模式：英文1 -> 英文2 -> (等2秒) -> 揭曉中文答案 -> 下一首
+            let eq1 = new SpeechSynthesisUtterance(beer.en); eq1.lang = 'en-US'; eq1.rate = currentSpeed;
+            let eq2 = new SpeechSynthesisUtterance(beer.en); eq2.lang = 'en-US'; eq2.rate = currentSpeed;
+            let zhAns = new SpeechSynthesisUtterance(`答案是：${beer.zh}`); zhAns.lang = 'zh-TW'; zhAns.rate = currentSpeed;
             
-            u1.onend = () => { 
+            eq1.onend = () => { if(isPlaying) synth.speak(eq2); };
+            eq2.onend = () => { 
                 if(isPlaying) {
-                    // 盲聽留白：考生的思考時間
                     delayTimeout = setTimeout(() => {
                         if(isPlaying) {
                             if(activeRow) activeRow.querySelectorAll('.zh, .en').forEach(el=>el.classList.add('revealed'));
-                            synth.speak(u2);
+                            synth.speak(zhAns);
                         }
-                    }, 2000); 
-                } 
+                    }, 2000); // 留給考生2秒思考時間
+                }
             };
-            u2.onend = () => { 
+            zhAns.onend = () => { 
                 if(isPlaying) { 
                     playPointer++; 
-                    delayTimeout = setTimeout(speak, 1200); 
+                    delayTimeout = setTimeout(speak, nextSongDelay); 
                 } 
             };
-            synth.speak(u1);
+            synth.speak(eq1);
         } else {
-            u1 = new SpeechSynthesisUtterance(beer.zh); u1.lang = 'zh-TW'; u1.rate = 0.9;
-            u2 = new SpeechSynthesisUtterance(beer.en); u2.lang = 'en-US'; u2.rate = 0.85;
+            // 一般模式：中文1 -> 英文1 -> 英文2 -> 下一首（確保英文一定唸兩次）
+            let uZh = new SpeechSynthesisUtterance(beer.zh); uZh.lang = 'zh-TW'; uZh.rate = currentSpeed;
+            let uEn1 = new SpeechSynthesisUtterance(beer.en); uEn1.lang = 'en-US'; uEn1.rate = currentSpeed;
+            let uEn2 = new SpeechSynthesisUtterance(beer.en); uEn2.lang = 'en-US'; uEn2.rate = currentSpeed;
             
-            // 完美鏈接：中文唸完，立刻接英文；英文唸完，再準備下一首
-            u1.onend = () => { 
-                if(isPlaying) {
-                    synth.speak(u2);
-                } 
-            };
-            u2.onend = () => { 
+            uZh.onend = () => { if(isPlaying) synth.speak(uEn1); };
+            uEn1.onend = () => { if(isPlaying) synth.speak(uEn2); };
+            uEn2.onend = () => { 
                 if(isPlaying) { 
                     playPointer++; 
-                    delayTimeout = setTimeout(speak, 1200); // 每一首之間留 1.2 秒空白
+                    delayTimeout = setTimeout(speak, nextSongDelay); 
                 } 
             };
-            synth.speak(u1);
+            synth.speak(uZh);
         }
     }
 
-    // 核心修正：移除重複的事件監聽器，確保不重疊
     document.getElementById('playBtn').addEventListener('click', startPlayback);
     document.getElementById('pauseBtn').addEventListener('click', pausePlayback);
     document.getElementById('stopBtn').addEventListener('click', stopPlayback);
