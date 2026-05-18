@@ -100,7 +100,7 @@
 </div>
 
 <script>
-    // 原始 100 項字母 A-Z 順序 (94 號已正名為 Tripel)
+    // 原始 100 項字母 A-Z 順序 (對齊無誤版)
     const alphaList = [
         {no:1, zh:"艾比酒", en:"Abbey Ale"},{no:2, zh:"老啤酒", en:"Altbier"},{no:3, zh:"琥珀愛爾", en:"Amber Ale"},{no:4, zh:"美式IPA", en:"American IPA"},{no:5, zh:"美式淡愛爾", en:"American Pale Ale"},
         {no:6, zh:"美式皮爾森", en:"American Pilsner"},{no:7, zh:"美式斯陶特", en:"American Stout"},{no:8, zh:"波羅地海波特", en:"Baltic Porter"},{no:9, zh:"大麥酒", en:"Barley Wine"},{no:10, zh:"桶陳", en:"Barrel Aged"},
@@ -165,6 +165,7 @@
     let showFavOnly = false;
     let displayList = []; let playOrder = []; let playPointer = 0;
     let isPlaying = false; let synth = window.speechSynthesis; let delayTimeout = null;
+    let utteranceQueue = []; // 解決部分行動裝置瀏覽器語音因被垃圾回收而突發性中斷的保護機制
 
     function prepareData() {
         let raw = currentSortMode === 'alpha' ? alphaList : categoryList;
@@ -222,6 +223,7 @@
 
     function handleItemTrigger(idx) {
         playPointer = playOrder.indexOf(idx);
+        if(playPointer === -1) playPointer = 0; // 安全防護
         startPlayback();
     }
 
@@ -279,6 +281,7 @@
         
         const idx = playOrder[playPointer];
         const beer = displayList[idx];
+        if(!beer) return; // 越界防護
         
         document.querySelectorAll('.beer-item').forEach(el=>el.classList.remove('playing'));
         
@@ -295,26 +298,31 @@
         const currentSpeed = parseFloat(document.getElementById('rateSlider').value);
         const nextSongDelay = parseFloat(document.getElementById('delaySlider').value) * 1000;
 
+        utteranceQueue = []; // 清空緩衝
+
         if (isQuizMode) {
-            let eq1 = new SpeechSynthesisUtterance(beer.en); eq1.lang = 'en-US'; eq1.rate = currentSpeed;
-            let eq2 = new SpeechSynthesisUtterance(beer.en); eq2.lang = 'en-US'; eq2.rate = currentSpeed;
+            // 盲聽模式：嚴格遵照原需求只播兩次英文 (en + en)，中文維持蓋板讓使用者手動點擊
+            let uEn1 = new SpeechSynthesisUtterance(beer.en); uEn1.lang = 'en-US'; uEn1.rate = currentSpeed;
+            let uEn2 = new SpeechSynthesisUtterance(beer.en); uEn2.lang = 'en-US'; uEn2.rate = currentSpeed;
             
-            eq1.onend = () => { if(isPlaying) setTimeout(() => { if(isPlaying) synth.speak(eq2); }, 100); };
-            eq2.onend = () => { 
-                if(isPlaying) { 
-                    playPointer++; 
-                    delayTimeout = setTimeout(speak, nextSongDelay); 
-                } 
-            };
-            synth.speak(eq1);
+            utteranceQueue.push(uEn1, uEn2); // 鎖定物件防止被回收
+            
+            uEn1.onend = () => { if(isPlaying) setTimeout(() => { if(isPlaying) synth.speak(uEn2); }, 100); };
+            uEn2.onend = () => { if(isPlaying) { playPointer++; delayTimeout = setTimeout(speak, nextSongDelay); } };
+            
+            synth.speak(uEn1);
         } else {
+            // 標準模式：中文 ➔ 英文 ➔ 英文
             let uZh = new SpeechSynthesisUtterance(beer.zh); uZh.lang = 'zh-TW'; uZh.rate = currentSpeed;
             let uEn1 = new SpeechSynthesisUtterance(beer.en); uEn1.lang = 'en-US'; uEn1.rate = currentSpeed;
             let uEn2 = new SpeechSynthesisUtterance(beer.en); uEn2.lang = 'en-US'; uEn2.rate = currentSpeed;
             
+            utteranceQueue.push(uZh, uEn1, uEn2);
+            
             uZh.onend = () => { if(isPlaying) setTimeout(() => { if(isPlaying) synth.speak(uEn1); }, 100); };
             uEn1.onend = () => { if(isPlaying) setTimeout(() => { if(isPlaying) synth.speak(uEn2); }, 100); };
             uEn2.onend = () => { if(isPlaying) { playPointer++; delayTimeout = setTimeout(speak, nextSongDelay); } };
+            
             synth.speak(uZh);
         }
     }
