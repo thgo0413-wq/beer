@@ -52,8 +52,7 @@
         
         .beer-item.playing { background-color: var(--highlight-bg); border-left: 4px solid var(--accent-color); font-weight: bold; }
         
-        /* 盲聽模式遮罩 */
-        .quiz-mode .beer-item .zh:not(.revealed) { color: transparent; background: #444; border-radius: 4px; cursor: pointer; }
+        /* 變更為：中文秀出，僅遮住英文 */
         .quiz-mode .beer-item .en:not(.revealed) { color: transparent; background: #444; border-radius: 4px; cursor: pointer; }
     </style>
 </head>
@@ -100,7 +99,6 @@
 </div>
 
 <script>
-    // 原始 100 項字母 A-Z 順序 (對齊無誤版)
     const alphaList = [
         {no:1, zh:"艾比酒", en:"Abbey Ale"},{no:2, zh:"老啤酒", en:"Altbier"},{no:3, zh:"琥珀愛爾", en:"Amber Ale"},{no:4, zh:"美式IPA", en:"American IPA"},{no:5, zh:"美式淡愛爾", en:"American Pale Ale"},
         {no:6, zh:"美式皮爾森", en:"American Pilsner"},{no:7, zh:"美式斯陶特", en:"American Stout"},{no:8, zh:"波羅地海波特", en:"Baltic Porter"},{no:9, zh:"大麥酒", en:"Barley Wine"},{no:10, zh:"桶陳", en:"Barrel Aged"},
@@ -124,39 +122,22 @@
         {no:96, zh:"小麥勃克", en:"Weizenbock"},{no:97, zh:"小麥愛爾", en:"Wheat Ale"},{no:98, zh:"白色IPA", en:"White IPA"},{no:99, zh:"冬季啤酒", en:"Winter Warmer"},{no:100, zh:"白啤酒", en:"Witbier"}
     ];
 
-    // 親緣邏輯分類順序 (100項無漏無重複)
     const categoryList = [
-        // 1. 基礎愛爾與英式傳統苦啤家族
         {no:3, zh:"琥珀愛爾", en:"Amber Ale"},{no:97, zh:"小麥愛爾", en:"Wheat Ale"},{no:18, zh:"苦啤酒", en:"Bitter"},{no:16, zh:"最佳苦啤酒", en:"Best Bitter"},{no:80, zh:"頂級苦啤酒", en:"Premium Bitter"},{no:39, zh:"特殊苦啤酒", en:"Extra Special Bitter"},{no:24, zh:"布頓愛爾", en:"Burton Ale"},{no:74, zh:"老愛爾", en:"Old Ale"},{no:26, zh:"木桶愛爾", en:"Cask Ale"},
-        // 2. 各地傳統淡愛爾家族
         {no:5, zh:"美式淡愛爾", en:"American Pale Ale"},{no:76, zh:"南太平洋淡愛爾", en:"Pacific Pale Ale"},{no:12, zh:"比利時淡愛爾", en:"Belgian Pale Ale"},{no:58, zh:"愛爾蘭紅愛爾", en:"Irish Red Ale"},{no:49, zh:"英式金愛爾", en:"Golden Ale"},
-        // 3. 印度淡愛爾大家族 (IPA)
         {no:56, zh:"印度式淡愛爾", en:"India Pale Ale"},{no:4, zh:"美式IPA", en:"American IPA"},{no:70, zh:"新英格蘭IPA", en:"NE IPA"},{no:23, zh:"香檳IPA", en:"Brut IPA"},{no:90, zh:"社交IPA", en:"Session IPA"},{no:19, zh:"黑色IPA", en:"Black IPA"},{no:85, zh:"紅色IPA", en:"Red IPA"},{no:98, zh:"白色IPA", en:"White IPA"},{no:34, zh:"雙倍IPA", en:"Double IPA"},{no:54, zh:"帝國IPA", en:"Imperial IPA"},{no:11, zh:"比利時IPA", en:"Belgian IPA"},
-        // 4. 德式愛爾與德式小麥家族
         {no:2, zh:"老啤酒", en:"Altbier"},{no:61, zh:"科隆", en:"Kolsch"},{no:53, zh:"酵母小麥", en:"Hefeweizen"},{no:63, zh:"水晶小麥", en:"Kristallweizen"},{no:37, zh:"黑小麥", en:"Dunkelweizen"},{no:96, zh:"小麥勃克", en:"Weizenbock"},
-        // 5. 波特與斯陶特深色家族
         {no:79, zh:"波特", en:"Porter"},{no:8, zh:"波羅地海波特", en:"Baltic Porter"},{no:59, zh:"愛爾蘭斯陶特", en:"Irish Stout"},{no:7, zh:"美式斯陶特", en:"American Stout"},{no:27, zh:"巧克力斯陶特", en:"Chocolate Stout"},{no:29, zh:"咖啡斯陶特", en:"Coffee Stout"},{no:68, zh:"牛奶斯陶特", en:"Milk Stout"},{no:72, zh:"燕麥斯陶特", en:"Oatmeal Stout"},{no:75, zh:"牡蠣斯陶特", en:"Oyster Stout"},{no:55, zh:"帝國斯陶特", en:"Imperial Stout"},
-        // 6. 比利時修道院與強愛爾家族
         {no:93, zh:"修道院", en:"Trappist"},{no:1, zh:"艾比酒", en:"Abbey Ale"},{no:20, zh:"比利時黃金", en:"Blond"},{no:14, zh:"比利時強金愛爾", en:"Belgian Strong Gold"},{no:35, zh:"比利時雙倍", en:"Dubbel"},{no:94, zh:"比利時三倍", en:"Tripel"},{no:13, zh:"比利時強黑愛爾", en:"Belgian Strong Dark"},{no:82, zh:"比利時四倍", en:"Quadrupel"},
-        // 7. 其他愛爾風格
         {no:22, zh:"棕愛爾", en:"Brown Ale"},{no:89, zh:"蘇格蘭愛爾", en:"Scotch Ale"},{no:67, zh:"輕愛爾", en:"Mild"},{no:86, zh:"裸麥愛爾", en:"Rye Ale"},{no:9, zh:"大麥酒", en:"Barley Wine"},
-        // 8. 皮爾森與歐陸淡色拉格家族
         {no:78, zh:"皮爾森", en:"Pilsner"},{no:31, zh:"捷克皮爾森", en:"Czech Pilsner"},{no:47, zh:"德式皮爾森", en:"German Pilsner"},{no:6, zh:"美式皮爾森", en:"American Pilsner"},{no:69, zh:"慕尼黑淡拉格", en:"Munich Helles"},{no:33, zh:"多特蒙德出口型拉格", en:"Dortmunder Export"},
-        // 9. 深色、琥珀與節慶拉格家族
         {no:36, zh:"黑拉格", en:"Dunkel"},{no:88, zh:"深黑拉格", en:"Schwarzbier"},{no:95, zh:"維也納", en:"Vienna"},{no:66, zh:"梅爾森", en:"Marzen"},{no:73, zh:"十月啤酒", en:"Oktoberfestbier"},
-        // 10. 勃克(加強型)拉格家族
         {no:21, zh:"勃克", en:"Bock"},{no:65, zh:"五月勃克", en:"Maibock"},{no:32, zh:"雙倍勃克", en:"Doppelbock"},{no:38, zh:"冰勃克", en:"Eisbock"},
-        // 11. 工藝與特殊混血拉格
         {no:25, zh:"加州一般型", en:"California Common"},{no:92, zh:"蒸氣啤酒", en:"Steam Beer"},{no:57, zh:"印度式淡拉格", en:"IPL"},{no:60, zh:"原漿啤酒", en:"Kellerbier"},
-        // 12. 德式與比利時野生自然發酵酸啤家族
         {no:15, zh:"柏林小麥", en:"Berliner Weisse"},{no:50, zh:"鹽小麥", en:"Gose"},{no:64, zh:"蘭比克", en:"Lambic"},{no:41, zh:"黑糖蘭比克", en:"Faro"},{no:52, zh:"香檳啤酒", en:"Gueuze"},{no:45, zh:"水果蘭比克", en:"Fruit Lambic"},{no:62, zh:"比利時櫻桃啤酒", en:"Kriek"},{no:42, zh:"法蘭德斯紅愛爾", en:"Flanders Red Ale"},{no:43, zh:"法蘭德斯棕愛爾", en:"Flemish Oud Bruin"},
-        // 13. 比利時白啤、水果與調味混釀家族
         {no:100, zh:"白啤酒", en:"Witbier"},{no:46, zh:"水果白啤酒", en:"Fruit Witbier"},{no:44, zh:"水果愛爾", en:"Fruit Ale"},{no:83, zh:"蘇打啤酒", en:"Radler"},
-        // 14. 蘋果與梨子西打酒家族
         {no:28, zh:"西打酒", en:"Cider"},{no:77, zh:"梨子西打酒", en:"Perry"},
-        // 15. 歷史古法、過桶與特殊調味家族
         {no:40, zh:"農舍愛爾", en:"Farmhouse Ale"},{no:87, zh:"季節啤酒", en:"Saison"},{no:51, zh:"古魯特", en:"Gruit"},{no:81, zh:"南瓜愛爾", en:"Pumpkin Ale"},{no:99, zh:"冬季啤酒", en:"Winter Warmer"},{no:30, zh:"奶油愛爾", en:"Cream Ale"},{no:84, zh:"煙燻啤酒", en:"Rauchbier"},{no:10, zh:"桶陳", en:"Barrel Aged"},{no:17, zh:"蒸餾啤酒", en:"Bierbrand"},
-        // 16. 當代酸啤與特殊健康宣稱
         {no:91, zh:"酸愛爾", en:"Sour Ale"},{no:48, zh:"無麩質啤酒", en:"Gluten Free"},{no:71, zh:"無酒精啤酒", en:"Non-alcohol"}
     ];
 
@@ -165,7 +146,7 @@
     let showFavOnly = false;
     let displayList = []; let playOrder = []; let playPointer = 0;
     let isPlaying = false; let synth = window.speechSynthesis; let delayTimeout = null;
-    let utteranceQueue = []; // 解決部分行動裝置瀏覽器語音因被垃圾回收而突發性中斷的保護機制
+    let utteranceQueue = [];
 
     function prepareData() {
         let raw = currentSortMode === 'alpha' ? alphaList : categoryList;
@@ -194,6 +175,7 @@
             const item = document.createElement('div');
             item.className = 'beer-item';
             item.id = `beer-${idx}`;
+            item.setAttribute('data-no', beer.no); 
             item.innerHTML = `
                 <div class="star-btn ${isFav ? 'favored' : ''}" onclick="toggleFav(event, ${beer.no})">★</div>
                 <div class="no" onclick="handleItemTrigger(${idx})">${String(beer.no).padStart(2,'0')}</div>
@@ -202,8 +184,15 @@
             `;
             
             item.addEventListener('click', (e) => {
-                if (e.target.classList.contains('star-btn') || e.target.classList.contains('zh') || e.target.classList.contains('en') || e.target.classList.contains('no')) return;
-                handleItemTrigger(idx);
+                if (e.target.classList.contains('star-btn') || e.target.classList.contains('no')) return;
+                
+                // 盲聽模式防誤觸：點擊整行均視為「揭曉答案（解鎖英文）」
+                if (document.getElementById('quizCheck').checked) {
+                    handleLabelClick(e, idx);
+                } else {
+                    if (e.target.classList.contains('zh') || e.target.classList.contains('en')) return;
+                    handleItemTrigger(idx);
+                }
             });
             
             container.appendChild(item);
@@ -214,7 +203,7 @@
     function handleLabelClick(e, idx) {
         e.stopPropagation();
         if (document.getElementById('quizCheck').checked) {
-            document.getElementById(`zh-${idx}`).classList.toggle('revealed');
+            // 盲聽模式下，僅點擊時單獨切換英文顯示狀態
             document.getElementById(`en-${idx}`).classList.toggle('revealed');
         } else {
             handleItemTrigger(idx);
@@ -223,7 +212,7 @@
 
     function handleItemTrigger(idx) {
         playPointer = playOrder.indexOf(idx);
-        if(playPointer === -1) playPointer = 0; // 安全防護
+        if(playPointer === -1) playPointer = 0; 
         startPlayback();
     }
 
@@ -233,10 +222,17 @@
     function toggleFavFilter() { showFavOnly = !showFavOnly; document.getElementById('favFilterBtn').classList.toggle('active',showFavOnly); stopPlayback(); renderList(true); }
     
     function handleShuffleToggle() { 
+        let currentPlayingNo = null;
+        const activeItem = document.querySelector('.beer-item.playing');
+        if (activeItem) {
+            currentPlayingNo = parseInt(activeItem.getAttribute('data-no'));
+        }
+
         rebuildPlayOrder(); 
-        if (isPlaying) {
-            const activePlayingItemIdx = document.querySelector('.beer-item.playing') ? parseInt(document.querySelector('.beer-item.playing').id.replace('beer-', '')) : 0;
-            playPointer = playOrder.indexOf(activePlayingItemIdx);
+
+        if (isPlaying && currentPlayingNo !== null) {
+            const newIdx = displayList.findIndex(item => item.no === currentPlayingNo);
+            playPointer = playOrder.indexOf(newIdx);
             if (playPointer === -1) playPointer = 0;
         } else {
             playPointer = 0;
@@ -246,7 +242,7 @@
     function handleQuizToggle() { 
         document.getElementById('listContainer').classList.toggle('quiz-mode', document.getElementById('quizCheck').checked); 
         if(!document.getElementById('quizCheck').checked) {
-            document.querySelectorAll('.zh, .en').forEach(el => el.classList.remove('revealed'));
+            document.querySelectorAll('.en').forEach(el => el.classList.remove('revealed'));
         }
     }
 
@@ -281,7 +277,7 @@
         
         const idx = playOrder[playPointer];
         const beer = displayList[idx];
-        if(!beer) return; // 越界防護
+        if(!beer) return; 
         
         document.querySelectorAll('.beer-item').forEach(el=>el.classList.remove('playing'));
         
@@ -298,19 +294,19 @@
         const currentSpeed = parseFloat(document.getElementById('rateSlider').value);
         const nextSongDelay = parseFloat(document.getElementById('delaySlider').value) * 1000;
 
-        utteranceQueue = []; // 清空緩衝
+        utteranceQueue = []; 
 
         if (isQuizMode) {
-            // 盲聽模式：嚴格遵照原需求只播兩次英文 (en + en)，中文維持蓋板讓使用者手動點擊
-            let uEn1 = new SpeechSynthesisUtterance(beer.en); uEn1.lang = 'en-US'; uEn1.rate = currentSpeed;
-            let uEn2 = new SpeechSynthesisUtterance(beer.en); uEn2.lang = 'en-US'; uEn2.rate = currentSpeed;
+            // 【變更】：語音播報兩次中文，不發出英文聲音
+            let uZh1 = new SpeechSynthesisUtterance(beer.zh); uZh1.lang = 'zh-TW'; uZh1.rate = currentSpeed;
+            let uZh2 = new SpeechSynthesisUtterance(beer.zh); uZh2.lang = 'zh-TW'; uZh2.rate = currentSpeed;
             
-            utteranceQueue.push(uEn1, uEn2); // 鎖定物件防止被回收
+            utteranceQueue.push(uZh1, uZh2); 
             
-            uEn1.onend = () => { if(isPlaying) setTimeout(() => { if(isPlaying) synth.speak(uEn2); }, 100); };
-            uEn2.onend = () => { if(isPlaying) { playPointer++; delayTimeout = setTimeout(speak, nextSongDelay); } };
+            uZh1.onend = () => { if(isPlaying) setTimeout(() => { if(isPlaying) synth.speak(uZh2); }, 100); };
+            uZh2.onend = () => { if(isPlaying) { playPointer++; delayTimeout = setTimeout(speak, nextSongDelay); } };
             
-            synth.speak(uEn1);
+            synth.speak(uZh1);
         } else {
             // 標準模式：中文 ➔ 英文 ➔ 英文
             let uZh = new SpeechSynthesisUtterance(beer.zh); uZh.lang = 'zh-TW'; uZh.rate = currentSpeed;
